@@ -1,4 +1,5 @@
-*.bat text eol=crlf
+# Stored byte-for-byte with CRLF so git archive keeps Windows line endings.
+*.bat -text
 *.command text eol=lf
 *.sh text eol=lf
 # Instructor-only files, left out of the participant zip.
