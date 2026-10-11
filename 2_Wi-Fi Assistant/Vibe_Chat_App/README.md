@@ -48,6 +48,16 @@ The first launch takes about a minute. After that it starts in a few seconds.
 - Type in the chat box and press Enter.
 - The **Agents and skills** panel on the right shows what you build.
 
+## API tokens for your MCP servers
+
+When you ask the chat to build an MCP server for a controller or cloud API (Mist, Meraki, NetBeez…), it tells you which names it needs, for example `MIST_API_TOKEN` and `MIST_BASE_URL`.
+
+1. Open **Secrets (API URLs, tokens, keys)** under the Agents panel on the right.
+2. Type the **Name** exactly as the chat gave it, paste the **Value**, and click **Save**.
+3. Send your next message. Your MCP servers restart with the new values. No need to restart the app.
+
+Never paste tokens or passwords into the chat itself. The values stay on your computer, and the AI only sees the names.
+
 ## Optional: Ollama (local models)
 
 1. Install Ollama from <https://ollama.com/download> and open it.
@@ -57,7 +67,6 @@ The first launch takes about a minute. After that it starts in a few seconds.
 ## If something goes wrong
 
 - **The browser did not open:** look in the Terminal or black window for a line like `http://127.0.0.1:7860` and open that address in your browser.
-- **Wrong or expired API key:** close the app, delete the file named `.env` in the Vibe_Chat_App folder, and start again. It will ask for the key.
-  On Mac the file is hidden: in Finder, press **Cmd + Shift + .** to show it.
+- **Wrong or expired OpenAI key:** in the **Secrets** panel, save the new key with the name `OPENAI_API_KEY`. It is used from your next message.
 - **"Could not install uv":** check your internet connection and start again.
 - Still stuck? Raise your hand.

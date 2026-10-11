@@ -27,7 +27,7 @@ import gradio as gr
 from agents import Agent, OpenAIChatCompletionsModel, Runner, function_tool, set_tracing_disabled
 from agents.mcp import MCPServerStdio
 from agents.model_settings import ModelSettings
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv, set_key, unset_key
 from openai import AsyncOpenAI
 from pypdf import PdfReader
 
@@ -39,8 +39,9 @@ UPLOADS = LAB / "Uploads"
 CODES_DIR = LAB / "Codes"
 SKILLS_DIR = LAB / "Skills"
 REGISTRY = HERE / "built_agents.json"
+ENV_FILE = ROOT / ".env"
 
-load_dotenv(ROOT / ".env", override=True)
+load_dotenv(ENV_FILE, override=True)
 
 PROVIDERS = ["OpenAI", "Ollama"]
 OPENAI_MODELS = [
@@ -94,7 +95,15 @@ How to build a skill:
 
 How to build an MCP server:
 - Call save_python_code and save the server as one .py file in Codes/.
+- Read every API URL, token, key, org or site id, username, and password from os.environ by name, such as MIST_API_TOKEN and MIST_BASE_URL. Never write a secret into the code.
+- Do not load a .env file in the server. The chat passes the saved secrets to it.
+- Do not stop at import when a value is missing. Inside the tool that needs it, return: <NAME> is not set. Add it in the Secrets panel.
+- After saving, call list_secret_names. Tell the student the exact names that are still missing and to add them in the Secrets panel on the right.
 - A server saved during this message is connected on the next message.
+
+Secrets:
+- Never ask the student to type a token, key, or password in the chat. Send them to the Secrets panel.
+- If the student pastes a secret in the chat anyway, do not repeat it and do not save it in code. Tell them to save it in the Secrets panel.
 
 How to use a skill:
 - Call read_skill, then run_skill_script with the arguments the skill names.
@@ -129,6 +138,64 @@ ollama_client = AsyncOpenAI(
 
 def backend_of(provider: str) -> str:
     return "ollama" if provider.strip().lower() == "ollama" else "openai"
+
+
+SECRET_NAME = re.compile(r"^[A-Z][A-Z0-9_]*$")
+
+
+def saved_secrets() -> dict[str, str]:
+    if not ENV_FILE.is_file():
+        return {}
+    return {k: v for k, v in dotenv_values(ENV_FILE).items() if v}
+
+
+def secrets_table() -> str:
+    secrets = saved_secrets()
+    if not secrets:
+        return "No secrets saved yet."
+
+    def masked(value: str) -> str:
+        return f"••••{value[-4:]}" if len(value) >= 12 else "••••"
+
+    return "\n".join(f"{name}  {masked(value)}" for name, value in sorted(secrets.items()))
+
+
+def secret_name(raw: str) -> str:
+    return re.sub(r"[\s\-.]+", "_", (raw or "").strip()).upper()
+
+
+def store_secret(raw_name: str, value: str) -> str:
+    """Save one secret to .env and to this process. Returns a status line."""
+    name = secret_name(raw_name)
+    value = (value or "").strip()
+    if not SECRET_NAME.match(name):
+        return "Name must start with a letter and use only letters, digits, and underscores, such as MIST_API_TOKEN."
+    if not value:
+        return f"Enter a value for {name}."
+    if "\n" in value or "\r" in value:
+        return "The value must be on one line."
+    ENV_FILE.touch(mode=0o600, exist_ok=True)
+    set_key(str(ENV_FILE), name, value)
+    os.environ[name] = value
+    return f"Saved {name}. MCP servers restart with it on your next message."
+
+
+def delete_secret(raw_name: str) -> str:
+    name = secret_name(raw_name)
+    if name not in saved_secrets():
+        return f"{name or 'That name'} is not saved."
+    unset_key(str(ENV_FILE), name)
+    os.environ.pop(name, None)
+    return f"Deleted {name}. MCP servers restart without it on your next message."
+
+
+@function_tool
+def list_secret_names() -> str:
+    """List the names of the secrets saved in the Secrets panel. Values are never shown."""
+    names = sorted(saved_secrets())
+    if not names:
+        return "No secrets are saved. The student adds them in the Secrets panel on the right."
+    return "Saved secrets (names only): " + ", ".join(names)
 
 
 @function_tool
@@ -1147,6 +1214,13 @@ async def _drop_mcp(path_key: str) -> None:
         pass
 
 
+async def restart_mcp_servers() -> None:
+    """Stop every MCP server so the next message starts them with the current secrets."""
+    async with _mcp_lock:
+        for key in list(_mcp_servers):
+            await _drop_mcp(key)
+
+
 async def prepare_mcp_servers() -> tuple[list[MCPServerStdio], str]:
     """Start every MCP server in Codes/ and keep each process until that file changes."""
     wanted = {str(path.resolve()): path for path in mcp_server_files()}
@@ -1239,7 +1313,7 @@ def make_turn_agent(
     def code_tools(record: dict) -> list:
         tools = [read_capture]
         if record.get("can_code"):
-            tools.extend([list_workspace, save_python_code, run_saved_python])
+            tools.extend([list_workspace, save_python_code, run_saved_python, list_secret_names])
         return tools
 
     pending: dict[str, Agent] = {}
@@ -1301,6 +1375,7 @@ def make_turn_agent(
         read_capture,
         save_python_code,
         run_saved_python,
+        list_secret_names,
         create_agent,
         get_agent_tool,
         update_agent_tool,
@@ -1556,14 +1631,36 @@ def build_demo() -> gr.Blocks:
                 elem_id="chatbot",
                 height="100%",
             )
-            roster = gr.Textbox(
-                value=agent_tree(),
-                label="Agents and skills",
-                lines=8,
-                interactive=False,
-                elem_id="agent-roster",
-                scale=1,
-            )
+            with gr.Column(scale=1, elem_id="side-panel"):
+                roster = gr.Textbox(
+                    value=agent_tree(),
+                    label="Agents and skills",
+                    lines=8,
+                    interactive=False,
+                    elem_id="agent-roster",
+                )
+                with gr.Accordion("Secrets (API URLs, tokens, keys)", open=False, elem_id="secrets"):
+                    secrets_list = gr.Textbox(
+                        value=secrets_table(),
+                        label="Saved",
+                        lines=3,
+                        interactive=False,
+                    )
+                    secret_name_box = gr.Textbox(
+                        label="Name",
+                        placeholder="MIST_API_TOKEN",
+                    )
+                    secret_value_box = gr.Textbox(
+                        label="Value",
+                        type="password",
+                        placeholder="Paste the value",
+                    )
+                    with gr.Row():
+                        save_secret_btn = gr.Button("Save", variant="primary", size="sm")
+                        delete_secret_btn = gr.Button("Delete", size="sm")
+                    secret_status = gr.Markdown(
+                        "Saved on this computer only, in the .env file. The AI sees the names, not the values."
+                    )
         box = gr.MultimodalTextbox(
             file_count="multiple",
             lines=1,
@@ -1593,6 +1690,30 @@ def build_demo() -> gr.Blocks:
             answer = await reply(updated, provider_name, model_name)
             updated.append({"role": "assistant", "content": answer})
             return updated, agent_tree(), False
+
+        async def on_save_secret(name, value):
+            status = store_secret(name, value)
+            if status.startswith("Saved"):
+                await restart_mcp_servers()
+                return secrets_table(), "", "", status
+            return secrets_table(), name, value, status
+
+        async def on_delete_secret(name):
+            status = delete_secret(name)
+            if status.startswith("Deleted"):
+                await restart_mcp_servers()
+            return secrets_table(), "", "", status
+
+        save_secret_btn.click(
+            on_save_secret,
+            [secret_name_box, secret_value_box],
+            [secrets_list, secret_name_box, secret_value_box, secret_status],
+        )
+        delete_secret_btn.click(
+            on_delete_secret,
+            [secret_name_box],
+            [secrets_list, secret_name_box, secret_value_box, secret_status],
+        )
 
         # Client-side only. A queued visibility update leaves Gradio's progress
         # overlay on the textbox, so the model name never appears.
@@ -1680,10 +1801,21 @@ footer { display: none !important; }
   white-space: pre-wrap !important;
   overflow: visible !important;
 }
-#agent-roster, #agent-roster textarea {
+#side-panel {
+  min-height: 0 !important;
+  max-height: 100% !important;
+  overflow-y: auto !important;
+  flex-wrap: nowrap !important;
+}
+#agent-roster {
+  flex: 1 1 0 !important;
+  min-height: 160px !important;
+}
+#agent-roster textarea {
   height: 100% !important;
   min-height: 0 !important;
 }
+#secrets { flex: 0 0 auto !important; }
 #agent-roster textarea { overflow: auto !important; }
 #composer {
   flex: 0 0 auto !important;

@@ -24,7 +24,7 @@ def ensure_api_key() -> None:
     print("Press Enter without a key to skip and use Ollama only.")
     key = getpass.getpass("OpenAI API key: ").strip()
     if not key:
-        print("Skipped. You can add the key later in the .env file in this folder.")
+        print("Skipped. You can add it later in the chat's Secrets panel, as OPENAI_API_KEY.")
         return
     ENV_FILE.touch(mode=0o600, exist_ok=True)
     set_key(str(ENV_FILE), "OPENAI_API_KEY", key, quote_mode="never")
