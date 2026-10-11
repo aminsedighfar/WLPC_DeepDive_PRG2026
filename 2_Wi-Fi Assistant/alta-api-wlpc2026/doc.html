@@ -1,0 +1,1117 @@
+<h1>Alta API Documentation</h1>
+<p>Alta APIs can be found at <a href="https://manage.alta.inc/api/">https://manage.alta.inc/api/</a>...<br>For example, &quot;POST /account/forgot&quot; would be accessible at <a href="https://manage.alta.inc/api/account/forgot">https://manage.alta.inc/api/account/forgot</a><br>Nearly all APIs are JSON-encoded (in and out).<br>Most APIs will respond {} for success, and HTTP code 400 for an error.</p>
+<p>Email/password authentication is performed using AWS Cognito. An example of how<br>to obtain a token (ID token) with node.js is below:</p>
+<pre><code>import { CognitoUserPool, CognitoUser, AuthenticationDetails } from
+  &#39;amazon-cognito-identity-js&#39;;
+
+const UserPoolId = &#39;us-east-1_4QbA7N3Uy&#39;;
+const ClientId = &#39;24bk8l088t5bf31nuceoqb503q&#39;;
+
+let Username = &quot;user@email.com&quot;;
+let Password = &quot;mypassword&quot;;
+
+const getToken = async () =&gt; {
+  const userPool = getUserPool();
+  const cognitoUser = getCognitoUser(userPool);
+  const authenticationDetails = getAuthenticationDetails();
+
+  return new Promise((resolve) =&gt; {
+    cognitoUser.authenticateUser(authenticationDetails, {
+      onSuccess: function (result) {
+        const token = result.getIdToken().getJwtToken();
+        resolve(token);
+      },
+      onFailure: function (err) {
+        console.log(&#39;error is &#39;, JSON.stringify(err));
+        resolve(null);
+      }
+    });
+  });
+};
+
+const getUserPool = () =&gt; {
+  const poolData = {
+    UserPoolId: UserPoolId,
+    ClientId: ClientId // Your App client id here
+  };
+  const userPool = new CognitoUserPool(poolData);
+  return userPool;
+};
+
+const getCognitoUser = userPool =&gt; {
+  const userParams = {
+    Pool: userPool,
+    Username: Username
+  };
+  const cognitoUser = new CognitoUser(userParams);
+  return cognitoUser;
+};
+
+const getAuthenticationDetails = () =&gt; {
+  const authenticationData = {
+    Username: Username,
+    Password: Password
+  };
+  const authenticationDetails = new AuthenticationDetails(authenticationData);
+  return authenticationDetails;
+};
+
+const main = async () =&gt; {
+  const token = await getToken();
+  console.log(token);
+};
+
+main();
+</code></pre>
+<h2>Endpoints that do not require a JWT</h2>
+<h3>POST /account/confirm-forgot</h3>
+<p>Confirm code and change Cognito user password</p>
+<ul>
+<li>body.email: Email account to request code for (required)</li>
+<li>body.code: One-time code to change password</li>
+<li>body.password: New password (required)</li>
+</ul>
+<h3>POST /account/forgot</h3>
+<p>Initiate resetting of Cognito password by sending one-time code to email</p>
+<ul>
+<li>body.email: Email account to to request for (required)</li>
+</ul>
+<h3>POST /account/login</h3>
+<p>Log into an account (local controller only)</p>
+<ul>
+<li>body.email: Account email (required)</li>
+<li>body.password: Account password (required)</li>
+<li>Returns { token: JWT, name: Account Display name }</li>
+</ul>
+<h3>POST /account/login-passkey-start</h3>
+<p>Start Cognito passkey login</p>
+<ul>
+<li>body.email: Account email (required)</li>
+</ul>
+<p>Returns Cognito challenge data for WEB_AUTHN</p>
+<h3>POST /account/login-passkey-complete</h3>
+<p>Complete Cognito passkey login</p>
+<ul>
+<li>body.email: Account email (required)</li>
+<li>body.session: Cognito session from login-passkey-start</li>
+<li>body.credential: AuthenticationResponseJSON credential from WebAuthn (required)</li>
+</ul>
+<h3>POST /account/login-google</h3>
+<p>Log in with Google Oauth (Deprecated for AWS Cognito)</p>
+<ul>
+<li>body.gtoken: Token from google (required)</li>
+<li>Returns { token: Our JWT, name: Account Display name, picture: Account avatar }</li>
+</ul>
+<h3>POST /account/new</h3>
+<p>Create new account, inserts token into db that must be verified later.<br>NOTE: This will only be used for a local controller.</p>
+<ul>
+<li>body.name: Name on account (required)</li>
+<li>body.email: Email account to create (required)</li>
+<li>body.password: Password for new account (required)</li>
+<li>body.gtoken: Recaptcha token</li>
+</ul>
+<h3>POST /account/recover</h3>
+<p>Start account recovery process by inserting new token into db, and emailing it</p>
+<ul>
+<li>body.email: Account email (required)</li>
+</ul>
+<h3>POST /account/signup</h3>
+<p>Sign up for Cognito account</p>
+<ul>
+<li>body.email: Email account to create (required)</li>
+<li>body.password: Password for new account (required)</li>
+<li>body.name: Name (required)</li>
+</ul>
+<h3>POST /account/verify</h3>
+<p>Verify an account token to finalize account creation</p>
+<ul>
+<li>body.token: Previously sent token to authorize request + space + account email (required)</li>
+<li>body.passwd: Optional new account password (required)</li>
+<li>body.nopasswd: True if the token should stay in the db for further verification<br>like account recovery</li>
+<li>Returns { noPasswd: true } if there was no password supplied for verification</li>
+</ul>
+<h3>GET /account/verify</h3>
+<p>Verify an account token to finalize account creation</p>
+<ul>
+<li>body.token: Previously sent token to authorize request + space + account email (required)</li>
+<li>body.passwd: Optional new account password (required)</li>
+<li>body.nopasswd: True if the token should stay in the db for further verification<br>like account recovery</li>
+<li>Returns { noPasswd: true } if there was no password supplied for verification</li>
+</ul>
+<h3>POST /device/boot</h3>
+<p>Record device boot event. Also stores IP addresses for device set up</p>
+<ul>
+<li>body.id: Device ID (MAC address) (required)</li>
+<li>body.pubkey: Device Public key (required)</li>
+<li>body.version: Device FW version (required)</li>
+<li>body.model: Device model (required)</li>
+</ul>
+<h3>POST /device/cert</h3>
+<p>Set up a DDNS pointer (e.g. from 192-168-x-x.$ddnsid.ddns.$DOMAIN to IP)</p>
+<ul>
+<li>body.mid: Device MID (required)</li>
+<li>body.ip: IP address to configure (i.e. 192.168.1.5) (required)</li>
+<li>body.ip6: IPv6 address to configure</li>
+<li>body.ip6ll: IPv6 LL address to configure</li>
+<li>body.pubip: Public IPv4 address to configure for public.$ddnsid</li>
+<li>body.pubip6: Public IPv6 address to configure for public.$ddnsid</li>
+<li>body.auth: Auth string to give to LetsEncrypt to prove domain ownership</li>
+<li>body.replace: Replace all ddns entries for this MID</li>
+</ul>
+<h3>POST /device/state</h3>
+<p>Record IPv4 VLAN addresses this device has observed in use, and<br>optionally its complete advertised-BSSID set. Existing VLAN address<br>rows are retained; freshness determines which one DNS considers current.</p>
+<ul>
+<li>body.mid: Device MID (required)</li>
+<li>body.vlanAddresses: Array of observed { vlan, ip } pairs (batch form)</li>
+<li>body.bssids: Array of compact or colon-delimited BSSIDs (optional)</li>
+</ul>
+<h3>POST /device/event</h3>
+<p>Upload a device event, like an IPS alert</p>
+<ul>
+<li>body.type: ips (required)</li>
+<li>body.mid: Device MID (required)</li>
+<li>body.id: Event ID (required)</li>
+<li>body.data: Event data (required)</li>
+</ul>
+<h3>POST /device/local-cert</h3>
+<p>Set up a DDNS pointer for a locally-hosted device<br>(e.g. from 192-168-x-x.$ddnsiddev.$ddnsidcontroller.$DOMAIN to IP)</p>
+<ul>
+<li>body.mid: Local Controller MID (required)</li>
+<li>body.ddns: Same ddns object as POST /device/cert</li>
+<li>body.replace: Replace all ddns entries for this Controller MID+Device MID combo</li>
+</ul>
+<h3>POST /device/local-state</h3>
+<p>Record network presence for a device hosted by a local controller.</p>
+<h3>POST /device/detected</h3>
+<p>Notify of detected device; similar to /device/boot except that the device<br>was detected by an already-configured device.</p>
+<ul>
+<li>body.mid: Detector mid (required)</li>
+<li>body.id: Detected Device ID (MAC address) (required)</li>
+<li>body.pubkey: Detected Device Public key (required)</li>
+<li>(mesh add only) body.model: Detected Device Model</li>
+<li>(mesh add only) body.version: Detected Device Model</li>
+<li>Returns: Key that detector can send to detectee to allow addition into site</li>
+</ul>
+<h3>POST /device/link</h3>
+<p>Store current LLDP neighbor, for use when/if the device ever goes disconnected</p>
+<ul>
+<li>body.descr: LLDP peer description/firmware</li>
+<li>body.mac: LLDP Peer MAC address</li>
+<li>body.mid: Managed device MID (required)</li>
+<li>body.name: LLDP peer name</li>
+<li>body.p: Device&#39;s local port number (required)</li>
+<li>body.port: LLDP peer port description</li>
+</ul>
+<h3>POST /device/oops</h3>
+<p>Upload a userland or kernel crash</p>
+<ul>
+<li>body.type: user or kernel (required)</li>
+<li>body.deviceid: Device ID (required)</li>
+<li>body.sig: Signature - sha256(req.dmesg (or req.dump)+req.deviceid+salt) (required)</li>
+<li>body.{cmdline,comm,maps,dmesg,status}: Userland crash info</li>
+<li>body.date: Unix Epoch time of crash</li>
+<li>body.count: Block number (for dumps only)</li>
+<li>body.bs: Block-size</li>
+</ul>
+<h3>POST /device/release</h3>
+<p>Release (delete) a device using a grab token</p>
+<ul>
+<li>body.releaseToken: release token (from /device/grab email) (required)</li>
+</ul>
+<h3>POST /push</h3>
+<pre><code>  /* CLOUD_ONLY:start */
+</code></pre>
+<p>Relay push notifications from a local controller. The cloud owns both<br>Firebase credentials and account FIDs; the controller only supplies its<br>MID, recipient email addresses, and notification content.</p>
+<h3>POST /email</h3>
+<p>Relay an email from another device</p>
+<ul>
+<li>body.*: Same as ses.sendEmail arguments</li>
+</ul>
+<h3>POST /fe/oops</h3>
+<p>Log a front-end error</p>
+<ul>
+<li>body.crash: stringified { url, msg, token }; URL and crash message and/or stack trace</li>
+<li>body.sig: sha256 of crash</li>
+</ul>
+<h3>GET /ip</h3>
+<p>Return IP address of client</p>
+<h3>GET /status</h3>
+<p>Health check</p>
+<h3>POST /wifi/approve</h3>
+<p>Respond to WiFi access request for client</p>
+<ul>
+<li>body.eventToken Event token (required)</li>
+<li>body.allow True or false; allow access or not</li>
+<li>body.timeout Allow for this many seconds (4 hours default, -1 = rest of today)</li>
+</ul>
+<h3>POST /wifi/auth</h3>
+<p>Authorize WiFi client on network</p>
+<ul>
+<li>body.dlRate Download rate limit in kpbs</li>
+<li>body.ident RADIUS Identity to user on RADIUS auth/accounting packets</li>
+<li>body.token Token given by captive portal (required)</li>
+<li>body.secret Authentication secret (i.e. from user-supplied SSID config) (required)</li>
+<li>body.timeout Seconds to authorize client (defaults to 4 hours)</li>
+<li>body.ignore_ts Ignore timestamp (for testing only)</li>
+<li>body.ulRate Upload rate limit in kpbs</li>
+</ul>
+<h3>POST /wifi/voucher/use</h3>
+<p>verify that a voucher is valid and set useTime</p>
+<ul>
+<li>body.ssidid</li>
+<li>body.voucher</li>
+</ul>
+<h3>POST /wifi/voucher/sync</h3>
+<p>Set use time on array of vouchers from AP state</p>
+<ul>
+<li>body.vouchers</li>
+</ul>
+<h3>POST /wifi/auth-req</h3>
+<p>Request WiFi access for client</p>
+<ul>
+<li>body.siteid Site ID (required)</li>
+<li>body.ssidid SSID ID (required)</li>
+<li>body.mac STA MAC address (required)</li>
+<li>body.net Network ID (required)</li>
+<li>body.mid AP&#39;s Managed ID</li>
+</ul>
+<h3>POST /wifi/hotspot-email</h3>
+<p>Collect a captive-portal email address and send its verification link.</p>
+<ul>
+<li>body.email Email address entered by the guest (required)</li>
+<li>body.siteid Site ID (required)</li>
+<li>body.ssidid SSID ID (required)</li>
+<li>body.apid Stable AP ID/MAC (required)</li>
+<li>body.mid Current AP managed ID used to authenticate the AP (required)</li>
+<li>body.mac Guest MAC address (required, compact form)</li>
+<li>body.ip Guest IP address observed by the AP</li>
+<li>body.net Network ID (required)</li>
+<li>body.dlRate Download rate to restore after verification</li>
+<li>body.ulRate Upload rate to restore after verification</li>
+<li>body.timeout Remaining authorization time in seconds</li>
+<li>body.marketingOptIn Whether the guest selected the promotional-email checkbox</li>
+</ul>
+<h3>GET /wifi/verify-email</h3>
+<p>Serve the email verification page without loading the full UI bundle.</p>
+<h3>POST /wifi/hotspot-email/verify</h3>
+<p>Verify an address collected by a captive portal. Replaying a valid<br>verification link is safe and retries removal of the temporary cap.</p>
+<ul>
+<li>body.verifyToken Token from the verification email (required)</li>
+</ul>
+<h3>GET /wifi/ssid-blob</h3>
+<p>Get WiFi SSID Blob (like image)</p>
+<ul>
+<li>body.id SSID ID (required)</li>
+<li>body.type Blob type (hotspotlogo, etc.) (required)</li>
+<li>Returns: Image/blob</li>
+</ul>
+<h3>POST /site/dynRouting</h3>
+<h2>Endpoints that do require a JWT</h2>
+<p>For POST calls, the token is passed via the &quot;token&quot; parameter. For GET<br>calls, it is passed via a &quot;token&quot; HTTP header.</p>
+<h3>POST /account/delete</h3>
+<p>Delete an account</p>
+<ul>
+<li>body.access_token: Access token received at login (required for Cognito accounts)</li>
+</ul>
+<h3>POST /account/info</h3>
+<p>Retrieve user information from Cognito and account notification devices.</p>
+<ul>
+<li>body.access_token: Access token received at login (required)</li>
+<li>Returns fids: Registered Firebase Installation IDs keyed by FID</li>
+</ul>
+<h3>POST /account/passkey/list</h3>
+<p>List the signed-in user&#39;s passkeys</p>
+<ul>
+<li>body.access_token: Access token received at login (required)</li>
+</ul>
+<h3>POST /account/passkey/register-start</h3>
+<p>Begin passkey registration for the signed-in user</p>
+<ul>
+<li>body.access_token: Access token received at login (required)</li>
+</ul>
+<h3>POST /account/passkey/register-complete</h3>
+<p>Complete passkey registration for the signed-in user</p>
+<ul>
+<li>body.access_token: Access token received at login (required)</li>
+<li>body.credential: RegistrationResponseJSON credential from WebAuthn (required)</li>
+</ul>
+<h3>POST /account/passkey/delete</h3>
+<p>Delete a passkey for the signed-in user, or all passkeys when disable is true</p>
+<ul>
+<li>body.access_token: Access token received at login (required)</li>
+<li>body.credentialId: Passkey credential ID to delete (optional if disable is true)</li>
+<li>body.disable: Delete all registered passkeys</li>
+</ul>
+<h3>POST /account/invite</h3>
+<p>Invite another user to a site</p>
+<ul>
+<li>body.siteid: SiteID to invite to (required)</li>
+<li>body.email: Invitee user account email (required)</li>
+<li>body.admin: True if this is an administrator account (default enabled if not included, except for )</li>
+<li>body.allPasswords: Allows read/write access to all passwords if admin.<br>Allows read access to all passwords if not admin.</li>
+<li>body.unlockedPasswords: Allows read/write access to all unlocked passwords.</li>
+<li>body.resend: Force sending of invite email</li>
+<li>body.noInvite: Do not send invite email</li>
+</ul>
+<h3>POST /account/list</h3>
+<p>List users that have access to a site</p>
+<ul>
+<li>body.siteid: SiteID (required)</li>
+<li>body.includeGroups: Set to true to return groups in addition<br> to users</li>
+</ul>
+<p>Returns array of emails:</p>
+<ul>
+<li>email: Email address</li>
+<li>name: Full name</li>
+<li>avatarId: Alta Avatar Id</li>
+<li>lastLogin: Last time user logged in</li>
+<li>notifications: Object of notification config for the user</li>
+<li>perms: Object of permissions config for the user</li>
+</ul>
+<h3>POST /account/logoutall</h3>
+<p>Invalidate all previous tokens for an account.</p>
+<h3>POST /account/release-updates</h3>
+<p>Subscribe the signed-in account to forum release-note notifications.</p>
+<h3>POST /account/release-updates/unsubscribe</h3>
+<p>Stop forum release-note notifications for the signed-in account.</p>
+<h3>POST /account/mfa/token</h3>
+<h3>POST /account/mfa</h3>
+<p>Create TOTP Image for enabling MFA, or Disable MFA</p>
+<p>Returns QR code image, or {} if disabling MFA</p>
+<ul>
+<li>body.access_token: Access token received at login (required)</li>
+<li>body.disable: True to disable OTP MFA</li>
+<li>body.phone: mobile number</li>
+<li>body.type: &#39;sms&#39; or &#39;app&#39;</li>
+</ul>
+<h3>POST /account/mfa-verify</h3>
+<p>Verify one-time code and activate MFA</p>
+<ul>
+<li>body.access_token: Access token received at login (required)</li>
+<li>body.code: One-time code to initiate authentication (required)</li>
+<li>body.type: &#39;sms&#39; or &#39;app&#39;</li>
+</ul>
+<h3>POST /account/update</h3>
+<p>Update account information</p>
+<ul>
+<li>body.password: (optional) New account password</li>
+<li>body.name: New account display name</li>
+<li>body.access_token: Access token received at login (required to change Cognito password)</li>
+<li>body.marketing: True to receive marketing emails</li>
+</ul>
+<h3>GET /account/subscriptions</h3>
+<p>Return the authenticated user&#39;s newsletter and release-update subscription statuses.</p>
+<h3>GET /account/newsletter</h3>
+<p>Return the authenticated user&#39;s Mailchimp Audience membership status.</p>
+<ul>
+<li>Returns { status: subscribed|pending|unsubscribed|cleaned|not_subscribed }</li>
+</ul>
+<h3>POST /account/newsletter/subscribe</h3>
+<p>Subscribe the authenticated user to the newsletter.</p>
+<h3>POST /account/newsletter/unsubscribe</h3>
+<p>Opt the authenticated user out without deleting their Mailchimp record.</p>
+<h3>POST /account/update-avatar</h3>
+<p>Update account avatar (multipart/form-data)</p>
+<ul>
+<li>body.avatar: Avatar buffer (null to delete)</li>
+<li>body.avatarType: Content-type (null to delete)</li>
+<li>body.access_token: Access token received at login</li>
+<li>Returns url of updated Avatar</li>
+</ul>
+<h3>POST /client/delete</h3>
+<p>Delete a client</p>
+<ul>
+<li>body.id: Device MAC address (required)</li>
+<li>body.siteid: Site ID (required)</li>
+</ul>
+<h3>POST /client/edit</h3>
+<p>Update a client&#39;s name, blocking status, and other settings</p>
+<ul>
+<li>body.id: Device MAC address</li>
+<li>body.clients: Array of clients instead of an individual client</li>
+<li>body.siteid: Site ID</li>
+<li>body.name: New Device Display Name</li>
+<li>body.type: Network type (&#39;standard&#39;, &#39;large&#39;, &#39;iot&#39;, &#39;internet&#39;, &#39;guest&#39;)</li>
+<li>body.vlan: VLAN</li>
+<li>body.ulRate: Upload rate in Kbps (0 is unlimited, null uses SSID default)</li>
+<li>body.dlRate: Download rate in Kbps (0 is unlimited, null uses SSID default)</li>
+<li>body.icon: Client icon (string)</li>
+<li>body.forceAp: Preferred AP device MAC (12 lowercase hex digits, no separators); null disables</li>
+<li>body.forceBand: 0 (any/default), 2, 5, or 6 GHz; requires forceAp and target AP support</li>
+<li>body.ignoreHotspot: Ignore Hotspot</li>
+<li>body.profile: connection profile id, null for SSID/password profile</li>
+<li>body.schedule: schedule profile id, null for password schedule, <strong>none</strong> to bypass</li>
+<li>body.filter: Array of filter profiles, null for password filter, [] to bypass all filters</li>
+<li>body.wired: (boolean, required) Wired device, as opposed to wireless; default false</li>
+</ul>
+<h3>GET /device</h3>
+<p>Get device config</p>
+<ul>
+<li>query.id: Device ID (required)</li>
+<li>Returns device object</li>
+</ul>
+<h3>POST /device/backup</h3>
+<p>Download a versioned backup containing the complete device database row.<br>A DDNS token is included when available so a restore can prove ownership<br>of, and reuse, the backed-up DDNSID.</p>
+<ul>
+<li>body.id: Device ID (required)</li>
+</ul>
+<h3>POST /device/restore</h3>
+<p>Restore configurable fields from a versioned device backup. The target<br>device retains its physical identity, site, keys, runtime state, and MID.<br>The device-level DDNSID is reused only when its token is valid; otherwise<br>a new ID is assigned. A locally hosted device&#39;s full DDNS hostname also<br>contains its controller DDNSID, which is intentionally not restored here.<br>Any other device displaced within the target controller namespace receives<br>and is synchronized with its own new DDNSID.</p>
+<ul>
+<li>body.id: Target device ID (required)</li>
+<li>body.backup: Parsed device backup object (required)</li>
+<li>body.skipDdnsRestore: Keep the target device&#39;s current DDNSID (optional)</li>
+</ul>
+<h3>POST /device/add</h3>
+<p>Add/re-add a device to a site</p>
+<ul>
+<li>body.siteid: SiteID (required)</li>
+<li>body.id: Device ID (required)</li>
+<li>body.pubkey: Device pubkey (required)</li>
+<li>body.model: Model (optional, for Bluetooth setup)</li>
+<li>body.version: Version (options, for Bluetooth setup)</li>
+<li>(obtained by backend) ip: Requesting user IP address</li>
+<li>Returns { mid: Managed ID, setup: Setup payload (Base64-encoded, RSA-encrypted, contains mid,siteid,mesh{id,pw},ts) }<br>or { error: &#39;unauthorized&#39; } if it&#39;s already in a site that this user is not an admin of</li>
+</ul>
+<h3>POST /device/add-serial</h3>
+<p>Add a device to a site using the full serial number</p>
+<ul>
+<li>body.siteid: SiteID (required)</li>
+<li>body.serial: Device Serial Number (required)</li>
+<li>Returns { error: &#39;registered&#39; } if device is already set up on a site</li>
+</ul>
+<h3>POST /device/delete</h3>
+<p>Delete a device from a site</p>
+<ul>
+<li>body.siteid: SiteID (required)</li>
+<li>body.id: Device ID (for unadded devices)</li>
+<li>body.mid: Device MID (for added devices)</li>
+<li>body.awaiting: true to delete an awaiting serial-add entry from auto</li>
+<li>Returns: { error: &#39;unauthorized&#39; } if user does not have permission to delete</li>
+</ul>
+<h3>POST /device/edit</h3>
+<p>Update a device&#39;s name or other settings</p>
+<ul>
+<li>body.id: Device ID (id or ids required)</li>
+<li>body.ids: Array of Device IDs (id or ids required)</li>
+<li>body.name: Device Display Name</li>
+<li>body.chan2: 2 GHz channel</li>
+<li>body.width2: 2 GHz channel width</li>
+<li>body.txp2: 2 GHz TX Power (auto, high, medium, or low)</li>
+<li>body.colors: Array of colors (e.g. [&#39;black&#39;, &#39;blue&#39;])</li>
+<li>body.chan5: 5 GHz channel</li>
+<li>body.width5: 5 GHz channel width</li>
+<li>body.chan6: 6 GHz channel</li>
+<li>body.width6: 6 GHz channel width</li>
+<li>body.txp5: 5 GHz TX Power (auto, high, medium, or low)</li>
+<li>body.txp6: 6 GHz TX Power (auto, high, medium, or low)</li>
+<li>body.network: Network protocol (dhcp or static)</li>
+<li>body.lanip: Static IP address</li>
+<li>body.subnet: Static IP Subnet</li>
+<li>body.dns1: DNS Server #1</li>
+<li>body.dns2: DNS Server #2</li>
+<li>body.vlan: Management VLAN</li>
+<li>body.fallback: true/false to enable network fallback</li>
+<li>body.alwaysOn: true/false to keep broadcasting even when Internet is down</li>
+<li>body.leds: null (follow site settings), &#39;blue&#39;, &#39;white&#39;, &#39;off&#39;, or<br>hex &#39;#rrggbb&#39; for switches</li>
+<li>body.linkLeds: null (follow site settings), &#39;enable&#39;, &#39;noblink&#39;, &#39;disable&#39;</li>
+<li>body.mesh: true/false to enable/disable wireless mesh, null to use<br>firmware default (enabled), or a 12-hex-digit physical AP MAC to prefer as uplink</li>
+<li>body.igmpSnooping: Array of VLAN IDs with IGMP snooping. Only on APs with switches</li>
+<li>body.poePassthru: true/false to enable POE passthrough on the output port</li>
+<li>body.nodoh: true to disable DOH</li>
+<li>body.portsCfg: Switch port configuration<ul>
+<li>portsCfg.ports: Object of switch port configuration objects:<ul>
+<li>Key: Port number, 0 = Port #1, for example: { portsCfg: { 0: { name: ... } } }</li>
+<li>name: Port name (default blank)</li>
+<li>mode: &#39;&#39;/undefined: Standard (default), &#39;disable&#39;: Disabled, &#39;8021x&#39;: 802.1x,<br>mirror:Number: Mirror another port,<br>:combine:A,B,C: LACP with other ports</li>
+<li>vlan: Native VLAN (Number). undefined: Use port-color setting.</li>
+<li>allowedVlans: Allowed VLANs object. undefined: User port-color settings.<ul>
+<li>all (Boolean): If true, then all site-wide VLANs will be allowed on this port</li>
+<li>list (Number Array): List of allowed VLANs</li>
+</ul>
+</li>
+<li>poe: Enable POE. undefined: Use port-color setting.<br>&#39;on&#39;: Enable, &#39;off&#39;: Disable</li>
+<li>speed: Speed configuration. undefined: Use port-color setting.<br>&#39;auto&#39;/undefined (Auto-negotiate) (default), &#39;1000&#39; (1000 Mbps FDX),<br>&#39;100f&#39; (100 Mbps FDX), &#39;100h&#39; (100 Mbps HDX), &#39;10f&#39; (10 Mbps FDX),<br>&#39;10h&#39; (10 Mbps HDX)</li>
+<li>isolation: Port isolation. undefined: Use port-color setting.<br>&#39;on&#39;: Enable, &#39;off&#39;: Disable</li>
+<li>dlRate: Download rate (Float, in Mbps). undefined: Use port-color setting.</li>
+<li>ulRate: Upload rate (Float, in Mbps). undefined: Use port-color setting.</li>
+<li>voiceVlan: Voice VLAN (Number). undefined: Use port-color setting.</li>
+<li>stp: Enable loop detection. undefined: Use port-color setting.<br>&#39;on&#39;: Enable, &#39;off&#39;: Disable</li>
+<li>allowed: Allowed MACs (String). undefined: Use port-color setting.<br>&#39;list&#39;: Use allowedList setting on this port.</li>
+<li>allowedList: Allowed MACs (String). undefined: Use port-color setting.<br>New-line delimited list of allowed MAC addresses.</li>
+<li>qosMode: QoS behavior for this port. undefined/&#39;default&#39;: Use port-color QoS,<br>&#39;custom&#39;: Use this port&#39;s own qos object, &#39;disabled&#39;: Disable QoS on this port.</li>
+<li>qos: Optional per-port QoS object, used when qosMode is &#39;custom&#39;:<ul>
+<li>profile: &quot;default&quot; | &quot;dante&quot; | &quot;crestron&quot; | &quot;qsys&quot; | &quot;shure&quot; | &quot;aes67&quot; | &quot;enterprise&quot; | &quot;voip&quot;</li>
+<li>basePriority: Base switch priority, 0-7</li>
+<li>rules: Array of override rule objects:<ul>
+<li>id: Unique rule ID</li>
+<li>map: Array of DSCP/TOS mapping objects:<ul>
+<li>type: Optional. Default is &#39;dscp&#39;; use &#39;tos&#39; for TOS / IPv6 traffic class matching.</li>
+<li>value: DSCP (0-63) or TOS / IPv6 traffic class (0-255) value,<br>or an array of such values that share the same priority handling</li>
+<li>mode: Optional. Default is &#39;offset&#39;; use &#39;absolute&#39; for a static priority</li>
+<li>prio: Switch priority (0-7), or amount to add to basePriority</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>schedule: Schedule profile ID. Switches and routers only.</li>
+</ul>
+</li>
+<li>portsCfg.aggregations: Array of router port aggregation objects:<ul>
+<li>ports: Zero-based numeric port indexes included in the aggregation. Linux<br>interface names are generated by the backend for firmware config.</li>
+<li>masterPort: Zero-based numeric port index whose portsCfg.ports settings<br>own the aggregation. Other member port settings are ignored.</li>
+<li>mode: &#39;802.3ad&#39; for LACP, or &#39;active-backup&#39; for active-passive.<br>LACP is only used when all member ports support the same speed group;<br>otherwise active-backup is used.</li>
+<li>ifName: Optional firmware bond interface name. If unset or duplicated,<br>the backend generates a unique bond name.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>body.radius: RADIUS server ID, for Switch port auth.</li>
+<li>body.services: Services object<ul>
+<li>radius: RADIUS Server config object<ul>
+<li>enabled: true or false</li>
+<li>authPort: RADIUS authentication port (default 1812)</li>
+<li>acctPort: RADIUS accounting port (default 1813)</li>
+<li>secret: RADIUS shared secret (auto-generated by FE)</li>
+<li>interimUpdate: Interim Update Interval (default 3600 seconds)</li>
+<li>tunneled: True to enable tunneled reply (default enabled)</li>
+<li>users: Array of RADIUS user objects []<ul>
+<li>id: Unique ID for this user</li>
+<li>username: RADIUS username</li>
+<li>password: RADIUS password</li>
+<li>vlan: WiFi VLAN to assign to this user</li>
+<li>wifiIp: Static IP address to assign user on WiFi (Framed-IP-Address)</li>
+<li>vpnIp: Static IP address to assign to this user on VPN</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>vpn: Array of VPN Server config objects []<ul>
+<li>type: &#39;ipsec&#39;, &#39;openvpn&#39;, or &#39;wireguard&#39;</li>
+<li>enabled: true or false</li>
+<li>mode: &#39;l2tp&#39; or &#39;ikev2&#39; for ipsec</li>
+<li>psk: l2tp/ikev2: Pre-shared key, wireguard: Private key (string)</li>
+<li>pubkey: wireguard: Public key (string)</li>
+<li>subnet: VPN subnet, i.e. 192.168.3.1/24</li>
+<li>dns: l2tp/ikev2/openvpn: DNS servers array, default auto (string)</li>
+<li>wins: l2tp/ikev2: WINS server (string)</li>
+<li>compatible: l2tp/ikev2: Allow weak ciphers and disable strong auth, for compatibility</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>stp: Enable STP (Routers only, default true)</li>
+<li>body.stpPriority: Switch STP bridge priority</li>
+<li>body.location: device location to display in snmp</li>
+</ul>
+<h3>POST /device/grab</h3>
+<p>Request permission to take over a device</p>
+<ul>
+<li>body.siteid: SiteID (required)</li>
+<li>body.id: Device ID (required)</li>
+<li>body.pubkey: Device public key</li>
+<li>body.model: Device model</li>
+<li>body.version: Device version</li>
+<li>Returns {} if request email was sent, or, if no request is required:<br>{ mid: Managed ID, setup: Setup payload (Base64-encoded, RSA-encrypted, contains mid,siteid,mesh{id,pw},ts) }</li>
+</ul>
+<h3>POST /device/ignore</h3>
+<p>Ignore a device that has been factory-reset (deletes the resetPubkey field)</p>
+<ul>
+<li>body.siteid: SiteID (required)</li>
+<li>body.id: Device ID (required)</li>
+<li>Returns: { error: &#39;unauthorized&#39; } if user does not have permission</li>
+</ul>
+<h3>GET /device/list</h3>
+<p>List unconfigured devices on a particular IP address or site</p>
+<ul>
+<li>(obtained by back-end) ip: IP address from proxy</li>
+<li>body.siteid: (optional) siteid</li>
+<li>body.siteName: (optional) site name</li>
+<li>Returns list of devices</li>
+</ul>
+<h3>POST /device/move</h3>
+<p>Move device from one site to another</p>
+<ul>
+<li>body.mid: Device MID (required)</li>
+<li>body.siteid: New Site ID (required)</li>
+</ul>
+<h3>POST /device/set-env</h3>
+<p>Set device environment</p>
+<ul>
+<li>body.mid: Device managed ID (required)</li>
+<li>body.env: New environment name, including leading dash (i.e. -prod) (required)</li>
+</ul>
+<h3>POST /device/search</h3>
+<p>Search for devices globally</p>
+<ul>
+<li>body.term: Term to search for</li>
+</ul>
+<h3>POST /device/update</h3>
+<p>Manually update a device.<br>NOTE: This is typically done directly from the Alta Apps via MQTT.</p>
+<ul>
+<li>body.mid: Device managed ID (required)</li>
+<li>body.now: Set to &quot;false&quot; to download/install now, but reboot during the night (optional)</li>
+<li>body.url: URL (optional - metadata from dl.alta.inc will be used if not supplied)</li>
+<li>body.version: Desired version (optional; must be paired with url)</li>
+</ul>
+<h3>POST /email/wg</h3>
+<p>Send wireguard QR code via email</p>
+<ul>
+<li>body.siteid: Site ID (required)</li>
+<li>body.conf: Wireguard config (required)</li>
+<li>body.email: Email address (required)</li>
+<li>body.username: Username</li>
+</ul>
+<h3>GET /filter</h3>
+<p>Get site filter settings</p>
+<ul>
+<li>body.siteid: SiteID (required)</li>
+</ul>
+<h3>POST /filter</h3>
+<p>Update site filter settings</p>
+<ul>
+<li>body.siteid: SiteID (required)</li>
+<li>body.domains: NL-delimited list of strings</li>
+<li>body.blockedApps.list: Array of strings, e.g. [&quot;netflix&quot;,&quot;disneyplus&quot;]<br>not including groups such as Chat or Gaming. The application should<br>expand the groups into the applications under it before sending this<br>value. The APs do not have a mapping of groups to applications, so the<br>web front-end/mobile app should expand this.</li>
+<li>body.blockedApps.selections: Array of strings, e.g. [&quot;netflix&quot;,&quot;disneyplus&quot;]<br>including selected groups.</li>
+<li>body.blockedRegions: Array of country codes to block, e.g. [&quot;IR&quot;, &quot;KP&quot;]</li>
+<li>body.blockedLists: Array of block lists, e.g. [&quot;bogon&quot;, &quot;firehol1&quot;]</li>
+</ul>
+<h3>POST /filter/pause</h3>
+<p>Pause a filter&#39;s domain blocking for a period of time</p>
+<ul>
+<li>body.mid: Device Managed ID (required)</li>
+<li>body.time: Unix Epoch time to pause until; -1 to unpause;<br>&quot;forever&quot; to pause forever (required)</li>
+</ul>
+<h3>GET /floor-plan/devices</h3>
+<p>List all devices on a floor plan</p>
+<ul>
+<li>req.siteid: Site ID (required)</li>
+<li>req.id: Floor ID (required)</li>
+</ul>
+<h3>POST /floor-plan/devices</h3>
+<p>Update devices on a floor</p>
+<ul>
+<li>body.siteid: Site ID (required)</li>
+<li>body.id: Floor ID (required)</li>
+<li>body.devices: Updated devices array (required)</li>
+</ul>
+<h3>POST /floor-plan/email</h3>
+<p>Send wishlist email for a floor</p>
+<ul>
+<li>req.siteid: Site ID (required)</li>
+<li>req.wishlist: Object of devices (with id as key) (required)</li>
+</ul>
+<h3>POST /floor-plan/floor</h3>
+<p>Update a floor and/or update floor metadata. Floor file<br>can be downloaded via /blobs/${siteid}/${id}-floor<br>afterwards</p>
+<ul>
+<li>body.siteid: Site ID (required)</li>
+<li>body.id: Floor ID (randomly generated, unique per floor; required)</li>
+<li>body.name: Floor name (optional)</li>
+<li>body.document: Document name (optional)</li>
+<li>body.file: Document (optional)</li>
+<li>body.upload: True to request a presigned file upload URL</li>
+<li>body.XXdoctype: &quot;pdf&quot;, &quot;png&quot;, or &quot;jpg&quot; (optional)</li>
+<li>body.position: Which position to insert the floor into, in the site&#39;s list of floors.</li>
+<li>body.scale: Scale of the floor plan</li>
+<li>body.page: For PDFs, which page of the document to use<br>All floors with equal or greater positions will be incremented by 1 (number, optional)</li>
+</ul>
+<h3>POST /floor-plan/delete-floor</h3>
+<p>Delete a floor from a site</p>
+<ul>
+<li>body.siteid: Site ID (required)</li>
+<li>body.id: Floor ID (required)</li>
+</ul>
+<h3>GET /floor-plan/floors</h3>
+<p>List all floors on a site</p>
+<ul>
+<li>req.siteid: Site ID (required)</li>
+</ul>
+<h3>POST /floor-plan/walls</h3>
+<p>Update walls on a floor (NOTE: GET is /blobs/${siteid}/${id}-walls)</p>
+<ul>
+<li>body.siteid: Site ID (required)</li>
+<li>body.id: Floor ID (required)</li>
+<li>body.walls: Walls metadata (required)</li>
+</ul>
+<h3>POST /floor-plan/delete-walls</h3>
+<p>Delete walls on a floor</p>
+<ul>
+<li>body.siteid: Site ID (required)</li>
+<li>body.id: Floor ID (required)</li>
+</ul>
+<h3>POST /group/add</h3>
+<p>Create a new user group</p>
+<ul>
+<li>body.name: Group Name (required)</li>
+<li>body.siteid: Originating site (optional)</li>
+<li>Returns new id</li>
+</ul>
+<h3>POST /group/delete</h3>
+<p>Delete a user group. Logged in user must be part of the group.</p>
+<ul>
+<li>body.id: Group to delete (required)</li>
+<li>body.siteid: Originating site (optional)</li>
+<li>Returns new id</li>
+</ul>
+<h3>POST /group/edit</h3>
+<p>Edit a user group. Logged in user must be part, and stay part, of<br>the group.</p>
+<ul>
+<li>body.id: Group ID (required)</li>
+<li>body.name: Updated group name (required)</li>
+<li>body.emails: Group members (array) (required)</li>
+<li>body.noInvite: Do not send invite emails</li>
+<li>body.siteid: Originating site (optional)</li>
+</ul>
+<h3>GET /site</h3>
+<p>Gets site&#39;s settings, excluding blockedHosts and emails</p>
+<ul>
+<li>query.id: siteid (required)</li>
+</ul>
+<h3>GET /site/state</h3>
+<p>Gets site&#39;s initial real-time state, similar to what would typically be obtained via MQTT&#39;s<br>first subscription response.</p>
+<ul>
+<li>query.id: siteid (required)</li>
+</ul>
+<h3>POST /site</h3>
+<p>Updates site&#39;s settings</p>
+<ul>
+<li>body.id: siteid (required)</li>
+<li>body.backnet: Backup network, e.g. 10.188.0.0/16. Blank to disable backup network.</li>
+<li>body.disconnectTimeout: Time to wait before sending disconnected device notification. Empty<br>to use default of 120 seconds.</li>
+<li>body.dpiEngine: Enable/disable DPI engine on APs</li>
+<li>body.routerDpi: Enable/disable DPI engine on Routers</li>
+<li>body.emails: Update emails</li>
+<li>body.ips: IPS config: { enabled: true/false, notifyLevel: 1, 2, or 3,<br>                    blockLevel: 1, 2, or 3, vlans: [ 1, 2, 3] (all if blank/unset) }</li>
+<li>body.stpMode: Set switch STP mode to MSTP/RSTP/STP</li>
+<li>body.ddm: Capture/display SFP DDM information</li>
+<li>body.leds: One of &quot;white&quot;, &quot;blue&quot;, or &quot;off&quot;</li>
+<li>body.logAPs: MB to reserve for persistent AP logs. Null uses ephemeral logs.</li>
+<li>body.logRouters: MB to reserve for persistent Router logs. Null uses ephemeral logs.</li>
+<li>body.logSwitches: MB to reserve for persistent Switch logs. Null uses ephemeral logs.</li>
+<li>body.hotspotEmailHourlyLimit: Maximum captive-portal verification emails<br>sent from this site during any rolling hour. Null uses the default of 100.</li>
+<li>body.noInvite: Do not send invite email if there are new users to the site</li>
+<li>body.portColors: Object of port color configurations; see /device/edit portsCfg settings.<br>For example: { portColors: { blue: { vlan: 2 ... } } }<br>Black color has the following defaults, which cannot be modified:<br>{ vlan: 1, allowedVlans: { all: true }, speed: &#39;auto&#39;, isolation: &#39;off&#39;, dlRate: &#39;none&#39;,<br>  ulRate: &#39;none&#39;, lldpMed: &#39;on&#39;, voiceVlan: undefined (none), loopDetection: &#39;on&#39;,<br>  stormControl: {}, allowedMacs: undefined (any) }<br>Port colors can also define qos with the same shape as /device/edit portsCfg.ports[*].qos<br>and act as the inherited default for ports using qosMode = &#39;default&#39;.</li>
+<li>body.radii: Radius server array, e.g. [ {<br>id: &#39;id&#39;, name: &#39;name&#39;, authIP: &#39;192.168.1.1&#39;, authPort: 1812, acctIP: &#39;192.168.1.1&#39;, acctPort: 1813<br>} ]</li>
+<li>body.sshKeys: Array of ssh public ssh keys</li>
+<li>body.dns: Site DNS settings (defaultTTL, useDoH, forceDoH, dohServers, dohBootstrapServers,<br>allServers, logQueries, records). DoH servers are comma-separated HTTPS URLs;<br>bootstrap servers are comma-separated IPv4/IPv6 addresses. Blank uses firmware defaults.<br>Record type defaults to A and is omitted for A records; omit TTL when it matches the site default (300).<br>DNS hostnames MUST be lowercase: every record.name and hostname fields in record.value<br>(CNAME/NS/PTR target, MX exchange, SRV target, SOA names, NAPTR replacement).<br>Preserve case in TXT text, NAPTR flags/services/regex, and DoH URL paths/query strings.</li>
+<li>body.routes: Array of Static Routes,<br>i.e.: [ { id: &#39;1234&#39;, name: &#39;ToOffice&#39;, network: &#39;192.168.2.0/24&#39;, nextHop: &#39;192.168.1.1&#39; } ]</li>
+<li>body.profiles: Array of connection profiles,<br>i.e.: [ { id: &#39;1234&#39;, name: &#39;test&#39;, &quot;type&quot;:&quot;iot&quot;,&quot;vlan&quot;:4,&quot;dlRate&quot;:50,&quot;ulRate&quot;:5,&quot;maxClients&quot;:2 } ]</li>
+<li>body.switchLeds: One of &quot;white&quot;, &quot;blue&quot;, &quot;off&quot;, or hex &quot;#rrggbb&quot;</li>
+<li>body.syslogHost: Remote syslog host, e.g. 192.168.1.1 or 192.168.1.1:514</li>
+<li>body.tz: Time zone</li>
+<li>body.update: Automatically update firmware</li>
+<li>body.updateWindow: null for default, or 0-1439 for minutes after midnight in the site timezone<br>when the 1-hour auto-update window starts</li>
+<li>body.updateDays: null for default, bitmap of days of the week where updates are allowed, 0 being Sunday</li>
+<li>body.useArpReq: Use ARP requests to learn wired device IP addresses, in addition to responses</li>
+<li>body.vlans: Array of VLAN definitions, i.e.: [ { id: 1, notes: &quot;Main VLAN&quot;, igmpSnooping: true } ]</li>
+<li>body.wans: Array of WAN definitions, i.e.: [ { id: &#39;default1&#39;, name: &#39;WAN1&#39;, type: &#39;dhcp&#39; } ]</li>
+<li>body.firewall: Firewall definition, i.e. { firewall: { rules: [{ id: ... }] }, nat: [] }</li>
+<li>body.notifications: Object of notification config,<br>i.e. { &quot;<a href="mailto:user@email.com">user@email.com</a>&quot;: { &quot;discon&quot;: true, &quot;access&quot;: true } }</li>
+<li>body.perms: Object of permissions config,<br>i.e. { &quot;<a href="mailto:user@email.com">user@email.com</a>&quot;: { &quot;admin&quot;: true, &quot;allPasswords&quot;: true, &quot;unlockedPasswords&quot;: true } }</li>
+<li>body.community: snmp community string</li>
+<li>body.username: snmpv3 username</li>
+<li>body.password: snmpv3 password</li>
+<li>body.contact: snmp contact field</li>
+<li>body.autoDfs: allows auto channel selection to select DFS channels</li>
+<li>body.autoNonPsc: allows auto channel selection to select non PSC channels</li>
+<li>body.rchans2: array of channels restricted from 2GHz auto channel selection</li>
+<li>body.rchans5: array of channels restricted from 5GHz auto channel selection</li>
+<li>body.rchans6: array of channels restricted from 6GHz auto channel selection</li>
+<li>body.dhcpGuard: &#39;auto&#39;, &#39;manual&#39;, &#39;auto + manual&#39;, or &#39;disabled&#39;</li>
+<li>body.dhcpMacList: List of MAC addresses that are allowed to provide DHCP responses</li>
+<li>body.txName: Transmit AP name within beacon</li>
+<li>body.webhook: Webhook URL to call when device disconnections are detected. Uses POST method with Content-Type of &quot;application/json&quot;.</li>
+<li>body.width2: 2 GHz default bandwidth. 0 = automatic</li>
+<li>body.width5: 5 GHz default bandwidth. 0 = automatic</li>
+<li>body.width6: 6 GHz default bandwidth. 0 = automatic</li>
+<li>body.pbrRules: Array of policy-based routing rules</li>
+<li>body.location: Site location, e.g. { lat: 37.169, lng: -113.417 }</li>
+<li>body.apRgbLeds: One of &quot;white&quot;, &quot;blue&quot;, &quot;off&quot;, or hex &quot;#rrggbb&quot;</li>
+<li>body.dashboard: Dashboard config, e.g. { enableSiteLocation: false }</li>
+<li>body.ipMonitorTimeout: timeout in seconds before monitored device is rebooted.</li>
+</ul>
+<h3>POST /sites/copy</h3>
+<p>Copy a site config (nearly)</p>
+<ul>
+<li>body.id: Site id</li>
+<li>body.name: New site name (required)</li>
+<li>body.icon: New site icon</li>
+<li>body.groupname: New group name</li>
+<li>Returns { id: siteid, name: Site name }</li>
+</ul>
+<h3>POST /sites/delete</h3>
+<p>Delete a site from an account. If there are no more emails associated<br>with the site, the site will be completely deleted and all<br>associated devices will be released.</p>
+<ul>
+<li>body.siteid: SiteID (required)</li>
+</ul>
+<h3>GET /sites/list</h3>
+<p>List sites that a user has access to. Creates a new home base site if<br>the user does not have access to any sites.</p>
+<ul>
+<li>body.tz: Time zone of browser (used when creating new site) (required if noAutoCreate is not set)</li>
+<li>body.noAutoCreate: true to disable auto-creation of Home Base</li>
+<li>Returns list of sites: [{<br> id,<br> name,<br> icon,<br> devices: { m: model, v: version, c: count },<br> online: #,<br> emails,<br> perms: {},<br> location: { lat, lng },<br> updateWindow,<br> updateDays,<br>}, ...]</li>
+</ul>
+<h3>POST /sites/new</h3>
+<p>Create a new site</p>
+<ul>
+<li>body.name: Site name (required)</li>
+<li>body.icon: Site icon</li>
+<li>body.groupname: Site group name (optional)</li>
+<li>body.tz: Time zone (required, e.g. America/Denver)</li>
+<li>body.location: Site location, e.g. { lat: 37.169, lng: -113.417 }</li>
+<li>Returns { id: siteid, name: Site name }</li>
+</ul>
+<h3>POST /sites/remove-user</h3>
+<p>Remove a user from a site</p>
+<ul>
+<li>body.siteid: SiteID (required)</li>
+<li>body.email: Account to delete from site (required)</li>
+</ul>
+<h3>POST /sites/rename</h3>
+<p>Rename a site; ensures that there cannot be multiple named sites</p>
+<ul>
+<li>body.siteid: SiteID (required)</li>
+<li>body.name: New Site Name (required)</li>
+<li>body.icon: New Icon</li>
+<li>body.groupname: New Group Name (optional)</li>
+<li>Returns { exists: true } if site name already exists</li>
+</ul>
+<h3>POST /sites/group-rename</h3>
+<p>Rename a group across all sites visible to the current user.</p>
+<ul>
+<li>body.oldGroupName: Existing group name (required)</li>
+<li>body.newGroupName: Updated group name or null/undefined to delete (optional)</li>
+</ul>
+<h3>POST /sites/stats</h3>
+<p>Tell devices in a site to start sending real-time stats (for 2 minutes).<br>If period is supplied, instead of sending real-time stats, devices will simply<br>send stats for the desired period. NOTE: If a request for the default 60 intervals<br>results in an Internal Server Error, please limit the amount of data requested by<br>specifying a shorter start and stop time.</p>
+<ul>
+<li>body.siteid: SiteID (required)</li>
+<li>body.period: seconds, minutes, hours, or days (optional)</li>
+<li>body.start: Start time in unix epoch seconds (optional). If not specified, will<br>be &quot;stop - retention period&quot;. Maximum retention duration is 60 snapshots of each<br>period, i.e. 60 seconds, 60 minutes, 60 hours, etc.</li>
+<li>body.stop: Stop time in unix epoch seconds (optional; defaults to now)</li>
+</ul>
+<h3>GET /vpn-groups/summary</h3>
+<p>Get compact summaries for all VPN groups the user can access.</p>
+<h3>GET /vpn-groups/:id</h3>
+<p>Get compact canonical intent for one VPN group. Private keys and generated<br>device configuration are never returned.</p>
+<h3>POST /vpn-groups</h3>
+<p>Create a backend-managed VPN group from compact group/member intent.</p>
+<h3>POST /vpn-groups/:id/edit</h3>
+<p>Update group-level intent using optimistic revision concurrency.</p>
+<h3>POST /vpn-groups/:id/members/batch</h3>
+<p>Apply one compact add/update/remove membership delta.</p>
+<h3>POST /vpn-groups/:id/delete</h3>
+<p>Delete a backend-managed group and its generated device configuration.</p>
+<h3>POST /wifi/auth-resp</h3>
+<p>Respond to WiFi access request for client</p>
+<ul>
+<li>body.siteid Site ID (required)</li>
+<li>body.eventid Event ID (required)</li>
+<li>body.allow True or false; allow access or not</li>
+<li>body.timeout Allow for this many seconds (4 hours default, -1 = rest of today)</li>
+</ul>
+<h3>POST /wifi/ssid</h3>
+<p>Update/Add WiFi SSID config</p>
+<p>body.config is ultimately passed directly to APs, including password<br>config/definition, etc.<br>Defaults below are what the Front-end should use to initialize a new<br>SSID with.</p>
+<ul>
+<li>NOTE: Field types may change at any time. Parsers should assume that<br>number-like values could potentially be passed as strings or integers,<br>and booleans could potentially be 0 or 1, etc. If a parser is unable<br>to handle a specific value, Alta Labs (and/or the developer) should<br>immediately be alerted to avoid poor user experience (i.e. this<br>should be treated as a &quot;crash&quot;)</li>
+<li>body.config (set field to null to delete from config):<ul>
+<li>ssid (String, required): SSID, i.e. WiFi Network Name</li>
+<li>sites (String Array, required): Site IDs to broadcast SSID on</li>
+<li>id (String, required): Set to &quot;new&quot; if creating new SSID</li>
+<li>acl (String): &quot;off&quot; to disable ACL, &quot;allow-list&quot; to only allow MACs<br>on the aclList, &quot;deny-list&quot; to deny MACs on the aclList, default &quot;off&quot;</li>
+<li>aclList (String): Newline-delimited list of MAC addresses to block or allow</li>
+<li>bands (String): &quot;both&quot; for 2 and 5 GHz, &quot;5&quot; for 5 GHz, &quot;2&quot; for 2 GHz,<br>default &quot;both&quot;</li>
+<li>colors (String array): Color groups that this SSID belongs to. APs<br>that match the colors here will broadcast this SSID. Default [&quot;black&quot;]</li>
+<li>dlRate (Number): Download limit, in Kbps. Default is to not specify.</li>
+<li>dtim2 (Number): WiFi DTIM setting on 2 GHz band, default 1</li>
+<li>dtim5 (Number): WiFi DTIM setting on 5 GHz band, default 3</li>
+<li>enabled (Bool): Disables SSID if false, set to null to use default of<br>enabled</li>
+<li>fastRoaming (Bool): Enable/disable 802.11r</li>
+<li>hidden (Bool): Enable/disable broadcasting of SSID publicly</li>
+<li>hotspot (Bool): Enable/disable WiFi hotspot</li>
+<li>hotspotExt (String): (External hotspot only) External hotspot URL</li>
+<li>hotspotExtAuth (String): (External hotspot only) Newline-delimited<br>list of IPs and hostnames that are allowed to be reached by guests<br>prior to authorization</li>
+<li>hotspotFinish (String): URL to redirect authorized hotspot users to<br>after authorization is complete</li>
+<li>hotspotCollectEmails (Bool): Require local-hotspot guests to submit<br>and verify an email address</li>
+<li>hotspotEmailRateLimit (Bool): Limit guest upload and download speeds<br>until their collected email address is verified. Defaults to true.</li>
+<li>hotspotEmailDlRate (Number): Pre-verification download limit, in<br>Kbps. Defaults to 1000 (1 Mbps); 0 disables this directional limit.</li>
+<li>hotspotEmailUlRate (Number): Pre-verification upload limit, in Kbps.<br>Defaults to 1000 (1 Mbps); 0 disables this directional limit.</li>
+<li>hotspotEmailRatesLinked (Bool): Whether the admin UI keeps the<br>pre-verification upload and download limits equal. Defaults to true.</li>
+<li>hotspotEmailOptInRequired (Bool): Require the promotional-email<br>checkbox before accepting an address. Defaults to false.</li>
+<li>hotspotEmailOptInText (String): Text displayed beside the<br>promotional-email checkbox.</li>
+<li>hotspotEmailPrivacyPolicy (String): Full privacy policy displayed<br>in the captive portal. Maximum 10,000 characters.</li>
+<li>hotspotTimeout (Int): Guest connection and email-verification<br>lifetime in seconds. Defaults to 4 hours.</li>
+<li>hotspotLogo (String): (Local hotspot only) hotspotLogo ID obtained<br>from /wifi/ssid-blob</li>
+<li>hotspotPassword (String): (Local hotspot only) Password required to<br>authorize hotspot guest</li>
+<li>hotspotSecret (String): (External hotspot only) Secret used to<br>authorize external hotspot portal authorization request</li>
+<li>hotspotTerms (String): (Local hotspot only) Hotspot Terms of Service</li>
+<li>hotspotTermsTitle (String): (Local hotspot only) Hotspot Terms Title</li>
+<li>hotspotTitle (String): (Local hotspot only) Hotspot Title</li>
+<li>hotspotType (String): &quot;local&quot; or &quot;external&quot;</li>
+<li>igmp (Bool): Enable IGMP/Multicast Snooping</li>
+<li>merge: Merge this config with existing SSID config, instead of<br>replacing completely. Useful for updating only a few fields.</li>
+<li>minrate2 (Number): Minimum WiFi data rate, in Kbps. Valid values:<br>1000, 2000, 5500, 6000, 9000, 11000, 12000, 18000, 24000, 36000,<br>48000, 54000. If not set (which should be the default), AP will<br>use firmware-defined default.</li>
+<li>minrate5 (Number): See minrate2, but for 5 GHz. Valid values:<br>6000, 9000, 12000, 18000, 24000, 36000, 48000, 54000.</li>
+<li>network (Number/String): &quot;main&quot; for native VLAN1, or VLAN ID number,<br>default &quot;main&quot;</li>
+<li>notes (String): Notes to attach to this SSID</li>
+<li>passwords (Password Array): See Password definition below</li>
+<li>vouchers (Voucher Array): Same as password definition with added fields for duration and single use</li>
+<li>pmf: (Bool): Enable WiFi PMF (Protected Management Frames)</li>
+<li>radiusAcctPort (Number): RADIUS Accounting Port Number, default 1813</li>
+<li>radiusAuthPort (Number): RADIUS Authentication Port Number, default 1812</li>
+<li>schedule (String): &quot;turn on&quot;: Enable WiFi during blocks,<br>&quot;turn off&quot;: Disable WiFi during blocks</li>
+<li>scheduleRequest (Bool): Allow user to request time during down time</li>
+<li>scheduleBlocks (ScheduleBlock Array): See ScheduleBlock definition below</li>
+<li>security (String): Security type, &quot;password&quot;, &quot;enterprise&quot;, or &quot;open&quot;</li>
+<li>template (String): Merge config with pre-defined template (blank or &quot;xnet&quot;)</li>
+<li>type (String): Default type of network filtering, &quot;main&quot;, &quot;large&quot;,<br>&quot;iot&quot;, &quot;guest&quot;, &quot;internet&quot;; default &quot;main&quot;</li>
+<li>ulRate (Number): Upload limit, in Kbps, Default is to not specify.</li>
+<li>wpa3 (String): &quot;on&quot;: WPA3 optional, &quot;required&quot;: WPA3 required,<br>&quot;off&quot;: WPA3 disabled; default &quot;off&quot;</li>
+<li>minrssi2 (Number): minimum RSSI to allow device to authenticate for 2 GHz</li>
+<li>minrssi5 (Number): minimum RSSI to allow device to authenticate for 5 GHz</li>
+</ul>
+</li>
+<li>Password (to use SSID defaults, just do not set specific fields):<ul>
+<li>password (String, Required): WPA-PSK Passphrase</li>
+<li>dlRate (Number): Download limit, in Kbps</li>
+<li>schedule (String Array): schedule IDs</li>
+<li>ignoreHotspot (Bool):  Bypass WiFi Hotspot</li>
+<li>filter (String Array): Filter IDs</li>
+<li>type (String): Default type of network filtering, &quot;main&quot;, &quot;large&quot;,<br>&quot;iot&quot;, &quot;guest&quot;, &quot;internet&quot;, unset to use SSID default</li>
+<li>ulRate (Number): Upload limit, in Kbps</li>
+<li>vlan (Number): VLAN ID</li>
+</ul>
+</li>
+<li>ScheduleBlock:<ul>
+<li>days (Number Array): Which days to schedule (0=Mon, 6=Sun)</li>
+<li>start (Float): Time to start schedule, e.g. 14 = 2PM</li>
+<li>stop (Float): Time to stop schedule, e.g. 18.5 = 6:30PM</li>
+</ul>
+</li>
+<li>Returns: { id }</li>
+</ul>
+<h3>POST /wifi/ssid-template/add-email</h3>
+<p>Unlock an SSID template for a specific account</p>
+<ul>
+<li>body.email: Email (required)</li>
+<li>body.template: Template name to allow (required)</li>
+</ul>
+<h3>GET /wifi/ssid</h3>
+<p>Get WiFi SSID Config</p>
+<ul>
+<li>body.id ssid id (required)</li>
+<li>Returns: { config, sites }</li>
+</ul>
+<h3>GET /wifi/ssid/hotspot-emails</h3>
+<p>Get verified captive-portal emails for CSV export.</p>
+<ul>
+<li>body.id SSID ID (required)</li>
+<li>Returns: { emails: [{ email, ts, verifiedAt, siteName, apid,<br>apName, mac, ip, marketingOptIn }] }</li>
+</ul>
+<h3>POST /wifi/ssid-blob</h3>
+<p>Update/Add WiFi SSID blobs (images, etc.) (multipart/form-data)</p>
+<ul>
+<li>body.id: SSID ID (required)</li>
+<li>body.hotspotlogo: Hotspot logo, NULL to delete</li>
+</ul>
+<h3>POST /wifi/ssid/delete</h3>
+<p>Delete WiFi SSID</p>
+<ul>
+<li>body.id: SSID ID (required)</li>
+</ul>
+<h3>GET /wifi/ssid/list</h3>
+<p>List WiFi SSIDs</p>
+<ul>
+<li>Returns: { ssids }</li>
+</ul>
+<h3>GET /wifi/ssid/state</h3>
+<p>Gets ssid template&#39;s initial real-time state, similar to what would<br>typically be obtained via MQTT&#39;s first subscription response. Any<br>accounts with the correct ending domain name will have access to this<br>data.</p>
+<ul>
+<li>query.ssid_template: Template Name (required)</li>
+</ul>
+<h3>GET /site/audit</h3>
+<p>Get the site&#39;s audit trail, with most recent events first.</p>
+<p>Returns up to 500 events.</p>
+<ul>
+<li>query.id: siteid (required)</li>
+</ul>
+<h3>GET /site/asn</h3>
+<p>Lookup ASN associated with the provided IP address.</p>
+<ul>
+<li>query.id: siteid (required)</li>
+<li>query.ip: IPv4 or IPv6 address (required)</li>
+</ul>
+<h3>POST /wifi/voucher/reset</h3>
+<p>Reset a voucher useTime</p>
+<ul>
+<li>body.ssidid (required)</li>
+<li>body.voucher (required)</li>
+<li>body.siteid (required)</li>
+</ul>
+<h3>GET /wifi/ssid/audit</h3>
+<p>Get the ssid&#39;s audit trail, with most recent events first.</p>
+<p>Returns up to 500 events.</p>
+<ul>
+<li>query.id: ssidid (required)</li>
+</ul>
+<h3>POST /profile/list</h3>
+<p>Get connection profiles, filter profiles, and schedule profiles.</p>
+<ul>
+<li>body.siteids: siteids array (required)<br>Profiles are top-level for this flow. The backend fetches profiles owned by<br>the user, directly referenced by SSIDs, or assigned directly to clients,<br>then fetches filters/schedules owned by the user, directly referenced by<br>SSIDs/clients, or indirectly referenced by profiles and filters.</li>
+</ul>
+<h3>POST /profile/edit</h3>
+<p>Edit/Add connection profile</p>
+<ul>
+<li>body.profile: profile json (required)</li>
+<li>body.siteid: siteid (required)</li>
+</ul>
+<h3>POST /profile/delete</h3>
+<p>Delete connection profile</p>
+<ul>
+<li>body.profileid: profile id to delete (required)</li>
+<li>body.profileName: profile name for audit logs (required)</li>
+<li>body.profile: siteid (required)</li>
+</ul>
+<h3>POST /filter/list</h3>
+<p>Get filter profiles. Kept for app versions that predate /profile/list<br>returning profiles, filters, and schedules together.</p>
+<ul>
+<li>body.siteids: siteids array (required)</li>
+<li>body.filterids: array of extra filterids to fetch (optional)</li>
+</ul>
+<h3>POST /filter/edit</h3>
+<p>Edit/Add filter profile</p>
+<ul>
+<li>body.filter: filter json (required)</li>
+<li>body.siteid: siteid (required)</li>
+</ul>
+<h3>POST /filter/delete</h3>
+<p>Delete filter profile</p>
+<ul>
+<li>body.filterid: filter id to delete (required)</li>
+<li>body.filterName: filter name for audit logs (required)</li>
+<li>body.filter: siteid (required)</li>
+</ul>
+<h3>POST /schedule/list</h3>
+<p>Get schedule profiles. Kept for app versions that predate /profile/list<br>returning profiles, filters, and schedules together.</p>
+<ul>
+<li>body.siteids: siteids array (required)</li>
+<li>body.scheduleids: array of extra scheduleids to fetch (optional)</li>
+</ul>
+<h3>POST /schedule/edit</h3>
+<p>Edit/Add schedule profile</p>
+<ul>
+<li>body.schedule: schedule json (required)</li>
+<li>body.siteid: siteid (required)</li>
+</ul>
+<h3>POST /schedule/delete</h3>
+<p>Delete schedule profile</p>
+<ul>
+<li>body.scheduleid: schedule id to delete (required)</li>
+<li>body.scheduleName: schedule name for audit logs (required)</li>
+<li>body.schedule: siteid (required)</li>
+</ul>
+

@@ -1,0 +1,49 @@
+BSSID,Network Name,AP Name,Vendor,Channel Utilization (%),Signal (dBm),Band,Channel,Channel Width,Security,Mode,Generation,Stations,Max Rate (Mbps),Amendments,Country Code,Seen,Transmit Power,Auth Key Management Suite Count
+0E:AC:8A:A9:DB:DD,ASHWINWIFI,HomeHub 4000 Unified,Sagemcom Broadband,3,-78,5 GHz,44,80 MHz,WPA2 (PSK),a/n/ac/ax,6,2,2402,d/e/h/i/k/v,CA,2026/10/10 11:43:50 AM,22,1
+BE:D5:ED:DE:45:3D,BELL033,HomeHub 5000,Sagemcom Broadband,41,-50,2.4 GHz,6,20 MHz,WPA2 (PSK),b/g/n/ax/be,7,0,688.2,d/e/h/i/k/v,CA,2026/10/10 11:43:50 AM,26,1
+0C:AC:8A:72:30:4C,⁣⁣Hidden Network⁣⁣,,Sagemcom Broadband,0,-52,5 GHz,132,80 MHz,WPA2 (PSK),a/n/ac/ax,6,0,2402,d/e/h/i/k/v,CA,2026/10/10 11:43:50 AM,22,1
+34:5D:9E:FE:D1:4A,Ronda Routsey,SagemcomFast5689_Bell-DM20,Sagemcom Broadband,28,-75,2.4 GHz,11,20 MHz,WPA2 (PSK),b/g/n/ax,6,1,573.5,d/e/h/i/k/v,CA,2026/10/10 11:43:30 AM,24,1
+40:C7:29:FA:2C:66,BELL980,SagemcomFast5566_Bell-DM16,Sagemcom Broadband,14,-63,2.4 GHz,6,20 MHz,WPA2 (PSK),b/g/n,4,1,288.9,d/e/i/k/v,CA,2026/10/10 11:43:50 AM,,1
+A0:2D:13:F0:A6:87,meshAirsonics_9378,Air4960XUS-AS,AirTies Wireless Networks,45,-55,2.4 GHz,11,20 MHz,WPA2 (PSK),b/g/n/ax,6,0,286.8,d/e/h/i/k/v/w,CA,2026/10/10 11:43:50 AM,22,1
+D4:20:B0:E0:70:69,WLPC2026_DEEPDIVE,,Mist Systems,0,-31,5 GHz,100,40 MHz,WPA3 (SAE),a/n/ac/ax,6,0,1147,d/e/h/i/k/v/w,CZ,2026/10/10 11:43:50 AM,23,1
+D4:20:B0:E0:70:6A,WLAN TEST,,Mist Systems,0,-31,5 GHz,100,40 MHz,WPA3 (SAE),a/n/ac/ax,6,0,1147,d/e/h/i/k/v/w,CZ,2026/10/10 11:43:50 AM,23,1
+0C:AC:8A:72:30:4B,Amin_Home,SagemcomFast5689_Bell-DM20,Sagemcom Broadband,38,-32,2.4 GHz,6,20 MHz,WPA2 (PSK),b/g/n/ax,6,0,573.5,d/e/h/i/k/v,CA,2026/10/10 11:43:50 AM,26,1
+22:8D:13:F0:A6:87,⁣⁣Hidden Network⁣⁣,,Silicon Laboratories,15,-78,5 GHz,60,160 MHz,WPA2 (PSK),a/n/ac/ax,6,0,4803.9,d/e/h/i/k/v/w,CA,2026/10/10 11:43:50 AM,22,1
+D4:20:B0:E0:70:84,WLAN TEST,,Mist Systems,16,-35,2.4 GHz,1,20 MHz,WPA3 (SAE),b/g/n/ax,6,0,573.5,d/e/h/i/k/v/w,CZ,2026/10/10 11:43:48 AM,18,1
+0E:AC:8A:72:30:4D,Amin_Home,SagemcomFast5689_Bell-DM20,Sagemcom Broadband,0,-52,5 GHz,132,80 MHz,WPA2 (PSK),a/n/ac/ax,6,2,2402,d/e/h/i/k/v,CA,2026/10/10 11:43:50 AM,22,1
+B8:D9:4D:F3:3E:F5,⁣⁣Hidden Network⁣⁣,,Sagemcom Broadband,3,-90,5 GHz,157,80 MHz,WPA2 (PSK),a/n/ac,5,0,1733.3,d/e/h/i/v,CA,2026/10/10 11:43:12 AM,,1
+BE:D5:ED:DE:45:3A,BELL033,HomeHub 5000,Sagemcom Broadband,0,-84,6 GHz,165,320 MHz,WPA3 (SAE),ax/be,7,2,11529.4,d/e/h/i/k/v/w,CA,2026/10/10 11:43:50 AM,23,1
+5C:7D:7D:B7:5D:04,⁣⁣Hidden Network⁣⁣,,Vantiva,,-75,2.4 GHz,1,20 MHz,WPA/WPA2 (802.1X),g/n,4,,144.4,d/e/h/i/k/v,CA,2026/10/10 11:43:50 AM,,1
+5C:7D:7D:B7:5C:FF,this place sucks ass,,Vantiva,,-76,2.4 GHz,1,20 MHz,WPA2 (PSK),g/n,4,,144.4,d/e/h/i/k/v,CA,2026/10/10 11:41:18 AM,,1
+5C:7D:7D:B7:5D:00,⁣⁣Hidden Network⁣⁣,,Vantiva,,-76,2.4 GHz,1,20 MHz,WPA2 (PSK),g/n,4,,144.4,d/e/h/i/k/v,CA,2026/10/10 11:43:50 AM,,1
+0E:AC:8A:A9:DB:D9,ASHWINWIFI,,Sagemcom Broadband,2,-84,6 GHz,37,160 MHz,WPA3 (SAE),ax,6,1,4803.9,d/e/h/i/k/v/w,CA,2026/10/10 11:43:50 AM,19,1
+BE:D5:ED:DE:45:3E,BELL033,HomeHub 5000,Sagemcom Broadband,5,-68,5 GHz,60,160 MHz,WPA2 (PSK),a/n/ac/ax/be,7,1,5764.7,d/e/h/i/k/v,CA,2026/10/10 11:43:50 AM,24,1
+BE:D5:ED:DE:45:3F,⁣⁣Hidden Network⁣⁣,,Sagemcom Broadband,5,-68,5 GHz,60,160 MHz,WPA2 (PSK),a/n/ac/ax/be,7,0,5764.7,d/e/h/i/k/v,CA,2026/10/10 11:43:50 AM,24,1
+A6:D9:4D:F3:3E:F5,Pourquoi-fi,,Sagemcom Broadband,3,-89,5 GHz,157,80 MHz,WPA2 (PSK),a/n/ac,5,4,1733.3,d/e/h/i/k/v,CA,2026/10/10 11:43:12 AM,,1
+0C:AC:8A:72:30:48,Amin_Home,,Sagemcom Broadband,4,-53,6 GHz,37,160 MHz,WPA3 (SAE),ax,6,2,4803.9,d/e/h/i/k/v/w,CA,2026/10/10 11:43:50 AM,19,1
+22:5D:13:CA:D3:84,WIFI FOR GUESTS,,,23,-79,2.4 GHz,11,20 MHz,WPA2 (PSK),b/g/n/ax,6,1,286.8,d/e/h/i/k/v/w,CA,2026/10/10 11:41:02 AM,22,1
+A0:2D:13:F0:A6:86,meshAirsonics_9378,,AirTies Wireless Networks,15,-78,5 GHz,60,160 MHz,WPA2 (PSK),a/n/ac/ax,6,3,4803.9,d/e/h/i/k/v/w,CA,2026/10/10 11:43:50 AM,22,1
+7E:D4:A8:D0:0D:D4,BELL356,HomeHub 5000,Sagemcom Broadband,27,-79,2.4 GHz,1,20 MHz,WPA2 (PSK),b/g/n/ax/be,7,1,688.2,d/e/h/i/k/v,CA,2026/10/10 11:43:34 AM,26,1
+4E:AD:2B:49:C8:18,⁣⁣Hidden Network⁣⁣,,Hitron Technologies,,-81,2.4 GHz,1,20 MHz,WPA2 (PSK),b/g/n,4,,216.7,d/e/i/k/v,US,2026/10/10 11:41:34 AM,,1
+CE:94:35:84:2A:0A,⁣⁣Hidden Network⁣⁣,,CommScope,,-83,2.4 GHz,1,20 MHz,WPA2 (PSK),b/g/n/ax,6,,573.5,d/e/i/k,CA,2026/10/10 11:41:34 AM,,1
+0E:AC:8A:A9:DB:DC,ASHWINWIFI,HomeHub 4000 Unified,Sagemcom Broadband,22,-60,2.4 GHz,1,20 MHz,WPA2 (PSK),b/g/n/ax,6,1,573.5,d/e/h/i/k/v,CA,2026/10/10 11:43:48 AM,26,1
+BA:D9:4D:F3:3E:F7,Pourquoi-fi (guest),,Sagemcom Broadband,30,-68,2.4 GHz,6,20 MHz,WPA2 (PSK),b/g/n,4,0,288.9,d/e/i/v,CA,2026/10/10 11:43:50 AM,,1
+F4:17:B8:D4:DF:56,meshAirsonics_7KYY,Air4960US-AS,AirTies Wireless Networks,24,-79,2.4 GHz,4,20 MHz,WPA2 (PSK),b/g/n/ax,6,0,286.8,d/e/h/i/k/v/w,CA,2026/10/10 11:43:30 AM,22,1
+D6:94:35:84:2A:0A,⁣⁣Hidden Network⁣⁣,,CommScope,,-84,2.4 GHz,1,20 MHz,WPA2 (802.1X),b/g/n/ax,6,,573.5,d/e/i/k,CA,2026/10/10 11:41:34 AM,,1
+B8:D9:4D:F3:3E:F6,Pourquoi-fi,SagemcomFast5566_Bell-DM17,Sagemcom Broadband,23,-72,2.4 GHz,6,20 MHz,WPA2 (PSK),b/g/n,4,2,288.9,d/e/i/k/v,CA,2026/10/10 11:43:50 AM,,1
+BE:D5:ED:F0:EE:5A,LPH07,,Sagemcom Broadband,38,-69,2.4 GHz,11,20 MHz,WPA2 (PSK),b/g/n/ax/be,7,0,688.2,d/e/h/i/k/v,CA,2026/10/10 11:43:50 AM,26,1
+34:5D:9E:FE:D1:4B,Ronda Routsey,,Sagemcom Broadband,4,-93,5 GHz,44,160 MHz,WPA2 (PSK),a/n/ac/ax,6,1,4803.9,d/e/h/i/k/v,CA,2026/10/10 11:42:54 AM,23,1
+0E:AC:8A:A9:DB:DE,⁣⁣Hidden Network⁣⁣,,Sagemcom Broadband,4,-75,5 GHz,44,80 MHz,WPA2 (PSK),a/n/ac/ax,6,0,2402,d/e/h/i/k/v,CA,2026/10/10 11:43:50 AM,22,1
+B4:B9:E6:53:7B:C7,⁣⁣Hidden Network⁣⁣,,eero,,-93,5 GHz,104,80 MHz,,a/n/ac/ax,6,,1201,d/e/h,CA,2026/10/10 11:43:50 AM,,
+54:AF:97:54:5C:57,UniqueWiFiName5G,AX1800 Wi-Fi Router,TP-Link,16,-78,2.4 GHz,10,20 MHz,WPA2 (PSK),b/g/n/ax,6,0,286.8,d/e/h/i/k/v,US,2026/10/10 11:43:30 AM,26,1
+A0:2D:13:CA:D3:83,DB9 Home,,AirTies Wireless Networks,19,-79,2.4 GHz,11,20 MHz,WPA2 (PSK),b/g/n/ax,6,4,286.8,d/e/h/i/k/v/w,CA,2026/10/10 11:42:38 AM,22,1
+20:23:51:82:D5:BE,⁣⁣Hidden Network⁣⁣,,TP-Link,,-80,2.4 GHz,2,40 MHz,WPA2 (PSK),b/g/n/ax,6,,573.5,d/e/h/i/k/v,US,2026/10/10 11:43:48 AM,25,1
+BA:D9:4D:F3:3E:F0,Pourquoi-fi (guest),,Sagemcom Broadband,5,-89,5 GHz,44,80 MHz,WPA2 (PSK),a/n/ac,5,0,1733.3,d/e/h/i/v,CA,2026/10/10 11:42:54 AM,22,1
+B8:D9:4D:F3:3E:F7,Pourquoi-fi,,Sagemcom Broadband,5,-89,5 GHz,44,80 MHz,WPA2 (PSK),a/n/ac,5,0,1733.3,d/e/h/i/k/v,CA,2026/10/10 11:42:54 AM,22,1
+2A:23:51:82:D5:BE,Primus197900,Whole-home Wi-Fi,TP-Link,,-80,2.4 GHz,2,40 MHz,WPA2 (PSK),b/g/n/ax,6,,573.5,d/e/h/i/k/v,US,2026/10/10 11:43:50 AM,25,1
+B4:B9:E6:53:7B:C3,⁣⁣Hidden Network⁣⁣,,eero,,-92,5 GHz,104,80 MHz,WPA3 (SAE),a/n/ac/ax,6,,1201,i/s/w,,2026/10/10 11:43:50 AM,,1
+B4:B9:E6:53:7B:C5,106&PARK,,eero,7,-92,5 GHz,104,80 MHz,WPA2 (PSK),a/n/ac/ax,6,8,1201,d/e/h/i/k/v,CA,2026/10/10 11:43:50 AM,,1
+4A:BD:CE:5E:04:4F,⁣⁣Hidden Network⁣⁣,,Vantiva,53,-75,2.4 GHz,1,20 MHz,WPA2 (PSK),g/n/ax,6,0,573.5,d/e/h/i/k,CA,2026/10/10 11:43:50 AM,22,1
+4A:BD:CE:5E:04:4E,Theirishman,,Vantiva,51,-78,2.4 GHz,1,20 MHz,WPA2 (PSK),g/n/ax,6,0,573.5,d/e/h/i/k/v,CA,2026/10/10 11:43:50 AM,22,1
+4A:BD:CE:5E:04:4B,⁣⁣Hidden Network⁣⁣,,Vantiva,53,-74,2.4 GHz,1,20 MHz,WPA2 (802.1X),g/n/ax,6,0,573.5,d/e/h/i/k,CA,2026/10/10 11:43:50 AM,22,1
+5C:7D:7D:B7:5D:05,⁣⁣Hidden Network⁣⁣,,Vantiva,,-73,2.4 GHz,1,20 MHz,WPA/WPA2 (PSK),g/n,4,,144.4,d/e/h/i,CA,2026/10/10 11:43:50 AM,,1
