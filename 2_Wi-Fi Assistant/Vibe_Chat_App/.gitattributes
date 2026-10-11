@@ -1,2 +1,7 @@
 *.bat text eol=crlf
 *.command text eol=lf
+*.sh text eol=lf
+# Instructor-only files, left out of the participant zip.
+make_zip.sh export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore

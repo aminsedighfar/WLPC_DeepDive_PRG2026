@@ -14,6 +14,15 @@ if errorlevel 1 (
     )
 )
 
+rem A .venv copied from another computer (for example inside a zip) cannot run here.
+if exist ".venv\" (
+    ".venv\Scripts\python.exe" -c "" >nul 2>nul
+    if errorlevel 1 (
+        echo Rebuilding the Python environment for this computer...
+        rmdir /s /q .venv
+    )
+)
+
 echo Preparing the lab. The first launch downloads Python and packages ^(about a minute^).
 uv run --quiet launcher.py
 echo Chat stopped.
