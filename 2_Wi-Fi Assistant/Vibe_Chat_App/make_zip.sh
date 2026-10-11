@@ -12,6 +12,6 @@ fi
 
 out="../Vibe_Chat_App.zip"
 rm -f "$out"
-git archive --format=zip --prefix=Vibe_Chat_App/ -o "$out" HEAD:"./"
+git archive --format=zip --prefix=Vibe_Chat_App/ -o "$out" "HEAD:$(git rev-parse --show-prefix)"
 echo "Built $(cd .. && pwd)/Vibe_Chat_App.zip:"
 unzip -l "$out"
