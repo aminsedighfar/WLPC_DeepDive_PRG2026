@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import contextvars
 import json
 import mimetypes
 import os
@@ -103,6 +104,10 @@ How to use what you built:
 - If an agent is already one of your tools and the request matches that agent, call it now. Do not call create_agent again.
 - That agent calls its own sub-agents. Do not do a sub-agent's job yourself when that sub-agent exists.
 - When the student asks you to write or run Python, call save_python_code and then run_saved_python yourself, then paste the output. Do this even when a coding agent exists.
+- A graph is a picture of the capture, in the style of an example image the student attaches. The example is style only. The numbers come from a pcap in this conversation.
+- When a capture is in the conversation and the student asks for a graph or diagram, call read_capture. If the student names a transmitter MAC, pass that mac. Then call save_python_code and run_saved_python. Plot the rows under "Data frames over time" from that reading: time on the x axis, sent and retries as two series. Save a .png. The picture is shown under your reply. Do not draw the graph as text. Do not invent the numbers.
+- If the reading contains "Data frames transmitted by", that sent and retries pair is the count for that transmitter. Do not use the broader Retries line.
+- If no capture is in the conversation, ask the student to attach the pcap here. Do not tell them to open Wireshark or run tshark.
 - When an MCP server is connected, call its tools yourself. Do not run that file with run_saved_python.
 - Do not tell the student to run Python, start a server, or paste output back.
 - Paste the tool output. Do not invent file contents, measurements, or program output.
@@ -116,6 +121,34 @@ Captures:
 The earlier messages are this conversation. Use them on a follow-up. Do not ask the student to repeat a request they already made.
 Never print API keys or tokens.
 """.strip()
+
+_NEW_IMAGES: contextvars.ContextVar[list[str] | None] = contextvars.ContextVar("new_images", default=None)
+
+
+def _image_stamps() -> dict[str, int]:
+    stamps: dict[str, int] = {}
+    if not LAB.is_dir():
+        return stamps
+    for path in LAB.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        if any(part.startswith(".") or part == "__pycache__" for part in path.relative_to(LAB).parts):
+            continue
+        try:
+            stamps[str(path.resolve())] = path.stat().st_mtime_ns
+        except OSError:
+            continue
+    return stamps
+
+
+def _keep_new_images(before: dict[str, int]) -> None:
+    bucket = _NEW_IMAGES.get()
+    if bucket is None:
+        return
+    for path, stamp in _image_stamps().items():
+        if before.get(path) != stamp and path not in bucket:
+            bucket.append(path)
+
 
 _mcp_lock = asyncio.Lock()
 _mcp_servers: dict[str, tuple[int, MCPServerStdio]] = {}
@@ -180,6 +213,7 @@ def run_saved_python(filename: str, extra_args: str = "") -> str:
     if is_mcp_server(path):
         return f"{name} is an MCP server and is already connected. Call its tools. Do not run this file."
     extra = shlex.split(extra_args) if extra_args.strip() else []
+    before = _image_stamps()
     try:
         completed = subprocess.run(
             [sys.executable, str(path), *extra],
@@ -190,7 +224,9 @@ def run_saved_python(filename: str, extra_args: str = "") -> str:
             env={**os.environ},
         )
     except subprocess.TimeoutExpired:
+        _keep_new_images(before)
         return "The program ran longer than 90 seconds and was stopped."
+    _keep_new_images(before)
     out = (completed.stdout or "") + (completed.stderr or "")
     return f"exit_code={completed.returncode}\n{out[-4000:]}"
 
@@ -198,7 +234,8 @@ def run_saved_python(filename: str, extra_args: str = "") -> str:
 CAPTURE_RULE = (
     "\n\npcap and pcapng files in Uploads/ are readable. "
     "Call read_capture with the file name. Pass mac when the student names a device. "
-    "Answer from that result. Never tell the student to run Wireshark, tshark, tcpdump, "
+    "Answer from that result. The data-frame rows over time are included. "
+    "Never tell the student to run Wireshark, tshark, tcpdump, "
     "Python, or any command, and never hand them a script to run."
 )
 
@@ -372,6 +409,38 @@ def _clock(ts: float | None) -> str:
     return when.strftime("%Y-%m-%d %H:%M:%S")
 
 
+def _per_second_lines(per_second: dict[int, list[int]]) -> list[str]:
+    """Rows the model can plot: time, data frames sent, data frames with the retry bit."""
+    if not per_second:
+        return []
+    start, end = min(per_second), max(per_second)
+    span = end - start + 1
+    step = 1
+    for candidate in (1, 2, 5, 10, 30, 60):
+        if span / candidate <= 200:
+            step = candidate
+            break
+    else:
+        step = max(1, (span + 199) // 200)
+    window = "one second" if step == 1 else f"{step} seconds"
+    lines = [
+        "Data frames over time. Columns: time, sent, retries. "
+        f"Retries are data frames with the retry bit. Each row is {window}."
+    ]
+    cursor = start
+    while cursor <= end:
+        sent = retries = 0
+        for sec in range(cursor, min(cursor + step, end + 1)):
+            pair = per_second.get(sec)
+            if pair:
+                sent += pair[0]
+                retries += pair[1]
+        when = datetime.fromtimestamp(cursor).strftime("%H:%M:%S")
+        lines.append(f"{when} {sent} {retries}")
+        cursor += step
+    return lines
+
+
 def summarize_capture(path: Path, mac: str = "") -> str:
     """Read a pcap or pcapng and return a short Wi-Fi / packet summary."""
     target = ""
@@ -387,6 +456,9 @@ def summarize_capture(path: Path, mac: str = "") -> str:
     receivers: Counter[str] = Counter()
     bssids: Counter[str] = Counter()
     signals: Counter[int] = Counter()
+    per_second: dict[int, list[int]] = {}
+    ta_per_second: dict[int, list[int]] = {}
+    ta_sent = ta_retries = 0
     link_counts: Counter[int] = Counter()
     for link, ts, pkt in _iter_packets(path):
         total += 1
@@ -450,6 +522,19 @@ def summarize_capture(path: Path, mac: str = "") -> str:
             signal = _radiotap_signal(pkt)
             if signal is not None and -110 <= signal <= 0:
                 signals[signal] += 1
+        if kind == 2 and not subtype & 0x4 and ts is not None and not target:
+            slot = per_second.setdefault(int(ts), [0, 0])
+            slot[0] += 1
+            if fc1 & 0x08:
+                slot[1] += 1
+        if kind == 2 and target and addr2 == target and ts is not None:
+            ta_sent += 1
+            if fc1 & 0x08:
+                ta_retries += 1
+            slot = ta_per_second.setdefault(int(ts), [0, 0])
+            slot[0] += 1
+            if fc1 & 0x08:
+                slot[1] += 1
     if total == 0:
         return f"{path.name} has no packets."
     span = ""
@@ -469,6 +554,16 @@ def summarize_capture(path: Path, mac: str = "") -> str:
             f"802.11 frames{scope}: {decoded}. "
             f"Retries: {retries} ({100 * retries / decoded:.1f}%). Protected: {protected}."
         )
+        if target:
+            lines.append(
+                f"Data frames transmitted by {target}: sent {ta_sent}, retries {ta_retries}. "
+                "This is 802.11 type 2 with transmitter address equal to that MAC, "
+                "and retries are those with the retry bit set. "
+                "Use this count. The Retries line above also includes other frame types and other transmitters."
+            )
+            lines.extend(_per_second_lines(ta_per_second))
+        else:
+            lines.extend(_per_second_lines(per_second))
         lines.append("Frames:")
         for name, count in kinds.most_common(12):
             lines.append(f"  {name}: {count}")
@@ -494,8 +589,8 @@ def summarize_capture(path: Path, mac: str = "") -> str:
                     break
             lines.append(f"Signal dBm: min {ordered[0]}, median {median}, max {ordered[-1]}.")
     text = "\n".join(lines)
-    if len(text) > 7000:
-        text = text[:7000] + "\n[summary truncated]"
+    if len(text) > 14000:
+        text = text[:14000] + "\n[summary truncated]"
     return text
 
 
@@ -1048,6 +1143,7 @@ def run_skill_script(skill: str, filename: str, extra_args: str = "") -> str:
     if not script.is_file():
         return f"No script {script.name} in {folder.name}."
     extra = shlex.split(extra_args) if extra_args.strip() else []
+    before = _image_stamps()
     try:
         completed = subprocess.run(
             [sys.executable, str(script), *extra],
@@ -1058,7 +1154,9 @@ def run_skill_script(skill: str, filename: str, extra_args: str = "") -> str:
             env={**os.environ},
         )
     except subprocess.TimeoutExpired:
+        _keep_new_images(before)
         return "The script ran longer than 90 seconds and was stopped."
+    _keep_new_images(before)
     out = (completed.stdout or "") + (completed.stderr or "")
     return f"exit_code={completed.returncode}\n{out[-4000:]}"
 
@@ -1133,7 +1231,8 @@ def is_mcp_server(path: Path) -> bool:
 def mcp_server_files() -> list[Path]:
     if not CODES_DIR.is_dir():
         return []
-    return [path for path in sorted(CODES_DIR.glob("*.py")) if is_mcp_server(path)]
+    files = [path for path in CODES_DIR.glob("*.py") if is_mcp_server(path)]
+    return sorted(files, key=lambda path: ("backup" in path.name.lower(), path.name.lower()))
 
 
 async def _drop_mcp(path_key: str) -> None:
@@ -1151,6 +1250,7 @@ async def prepare_mcp_servers() -> tuple[list[MCPServerStdio], str]:
     wanted = {str(path.resolve()): path for path in mcp_server_files()}
     lines = ["MCP servers:"]
     connected: list[MCPServerStdio] = []
+    seen_tools: set[str] = set()
     async with _mcp_lock:
         for key in list(_mcp_servers):
             if key not in wanted:
@@ -1188,14 +1288,29 @@ async def prepare_mcp_servers() -> tuple[list[MCPServerStdio], str]:
                 _mcp_servers[key] = (stamp, server)
                 current = _mcp_servers[key]
             server = current[1]
-            connected.append(server)
             try:
                 tools = await server.list_tools()
-                names = ", ".join(sorted(tool.name for tool in tools)) or "(no tools)"
+                names = sorted(tool.name for tool in tools)
             except Exception as exc:
-                names = f"could not list tools ({type(exc).__name__}: {exc})"
+                connected.append(server)
+                lines.append(
+                    f"- Codes/{path.name} is connected, but its tools could not be listed "
+                    f"({type(exc).__name__}: {exc})."
+                )
+                continue
+            overlap = sorted(set(names) & seen_tools)
+            if overlap:
+                await _drop_mcp(key)
+                lines.append(
+                    f"- Codes/{path.name} was not connected. "
+                    f"These tools are already provided by another MCP server: {', '.join(overlap)}."
+                )
+                continue
+            seen_tools.update(names)
+            connected.append(server)
+            shown = ", ".join(names) or "(no tools)"
             lines.append(
-                f"- Codes/{path.name} is connected. Tools: {names}. "
+                f"- Codes/{path.name} is connected. Tools: {shown}. "
                 "Call the matching tool. Do not run this file with run_saved_python."
             )
     if len(lines) == 1:
@@ -1359,7 +1474,11 @@ def file_note(path: Path, backend: str) -> str:
     size = path.stat().st_size if path.is_file() else 0
     if suffix in IMAGE_SUFFIXES:
         if backend == "openai" and size <= MAX_IMAGE_BYTES:
-            return f"[Image attached: {path.name}]"
+            return (
+                f"[Image attached: {path.name}. This is a picture, not a capture. "
+                "If the student says it is an example, match its style. "
+                "The numbers come from a pcap in this conversation.]"
+            )
         if backend == "ollama":
             return (
                 f"[Image saved as {path.name}, {size} bytes. "
@@ -1506,20 +1625,28 @@ async def reply(history, provider: str, model_name: str) -> str:
 
     set_tracing_disabled(backend == "ollama")
     print(f"{label} → {backend} · {model_name} · turns={len(items)}")
+    token = _NEW_IMAGES.set([])
     try:
-        result = await Runner.run(agent, items)
-        used = []
-        for item in result.new_items:
-            raw = getattr(item, "raw_item", None)
-            tool_name = getattr(raw, "name", None)
-            if tool_name:
-                used.append(tool_name)
-        if used:
-            print("Tools:", ", ".join(used))
-        output = (result.final_output or "").strip() or "(The model returned no text.)"
-    except Exception as exc:
-        output = f"Error: {type(exc).__name__}: {exc}"
-    return f"**{label}** · `{model_name}`\n\n{output}"
+        try:
+            result = await Runner.run(agent, items)
+            used = []
+            for item in result.new_items:
+                raw = getattr(item, "raw_item", None)
+                tool_name = getattr(raw, "name", None)
+                if tool_name:
+                    used.append(tool_name)
+            if used:
+                print("Tools:", ", ".join(used))
+            output = (result.final_output or "").strip() or "(The model returned no text.)"
+        except Exception as exc:
+            output = f"Error: {type(exc).__name__}: {exc}"
+        images = list(_NEW_IMAGES.get() or [])
+    finally:
+        _NEW_IMAGES.reset(token)
+    body = f"**{label}** · `{model_name}`\n\n{output}"
+    if not images:
+        return body
+    return [body, *({"path": path} for path in images[:6])]
 
 
 def build_demo() -> gr.Blocks:
